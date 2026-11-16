@@ -259,7 +259,7 @@ async function checkPeerKeyPin(peerId,keys){
  if(pinned&&pinned!==current){
   const name=profilesById.get(peerId)?.username||"this member";
   const fp=await peerKeyFingerprint(keys);
-  const entered=prompt("ENCRYPTION KEY CHANGED FOR "+name.toUpperCase()+"\\n\\nNew combined public-key fingerprint:\\n"+fp+"\\n\\nCompare this exact fingerprint with "+name+" through a separate trusted channel (in person or a phone call). If it matches, type or paste the fingerprint below to approve this intentional key replacement. Otherwise press Cancel.\\n\\nApproving replaces only the saved fingerprint on this device.");
+  const entered=prompt("ENCRYPTION KEY CHANGED FOR "+name.toUpperCase()+"\n\nNew combined public-key fingerprint:\n"+fp+"\n\nCompare this exact fingerprint with "+name+" through a separate trusted channel (in person or a phone call). If it matches, type or paste the fingerprint below to approve this intentional key replacement. Otherwise press Cancel.\n\nApproving replaces only the saved fingerprint on this device.");
   if((entered||"").trim().toUpperCase()!==fp){
    throw Error("SECURITY WARNING: this member’s public encryption key changed and has NOT been approved. Messages from this account remain blocked.");
   }
