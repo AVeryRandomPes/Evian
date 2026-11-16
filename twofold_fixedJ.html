@@ -821,8 +821,8 @@ async function connectPresenceRealtime(){
  activePresence.subscribe(async status=>{
   if(presenceChannel!==activePresence)return;
   if(status==="SUBSCRIBED"){
-   const {error}=await activePresence.track({user_id:user.id,online:true,username:profile.username,at:new Date().toISOString()});
-   if(error){console.error("Twofold presence tracking failed:",error);$("friendStatus").innerHTML='<span class="dot"></span>Presence unavailable';}
+   const trackStatus=await activePresence.track({user_id:user.id,online:true,username:profile.username,at:new Date().toISOString()});
+   if(trackStatus!=="ok"){console.error("Twofold presence tracking failed:",trackStatus);$("friendStatus").innerHTML='<span class="dot"></span>Presence unavailable';}
    else updatePresence();
   }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
    console.warn("Twofold global presence connection issue:",status);
