@@ -185,7 +185,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 (() => {
 "use strict";
 const $ = id => document.getElementById(id);
-let client=null, user=null, profile=null, channel=null, messageChannel=null, authSubscription=null, membershipChannel=null, conversationRefreshTimer=null, members=[], approvedMembers=[], conversations=[], conversationMembers=[], currentConversation=null, typingTimer=null, typingOffTimer=null, typingLastSentAt=0, lastMessageId=0, seenIds=new Set(), identity=null, publicKeys=new Map(), profilesById=new Map(), selectionVersion=0, unreadCounts={}, renderedObjectUrls=new Set(), mode="login";
+let client=null, user=null, profile=null, channel=null, messageChannel=null, authSubscription=null, membershipChannel=null, conversationRefreshTimer=null, members=[], approvedMembers=[], conversations=[], conversationMembers=[], currentConversation=null, typingTimer=null, typingOffTimer=null, typingLastSentAt=0, lastMessageId=0, seenIds=new Set(), identity=null, publicKeys=new Map(), publicKeyFetchedAt=new Map(), profilesById=new Map(), selectionVersion=0, unreadCounts={}, renderedObjectUrls=new Set(), mode="login";
 const show = (id,on=true)=>$(id).classList.toggle("hidden",!on);
 const err = (id,msg)=>$(id).textContent=msg||"";
 const initials = s => (s||"?").trim().slice(0,1).toUpperCase();
@@ -234,8 +234,26 @@ async function checkPeerKeyPin(peerId,keys){
  return keys;
 }
 async function getPeerKeys(senderId){
- let keys=publicKeys.get(senderId);
- if(!keys){const {data,error}=await client.from("profiles").select("x25519_public,ed25519_public").eq("id",senderId).single();if(error||!data?.x25519_public||!data?.ed25519_public)throw Error("This member has not initialized encryption yet. Ask them to sign in with the updated Twofold file.");keys=data;publicKeys.set(senderId,keys);}
+ const cached=publicKeys.get(senderId);
+ const fetchedAt=publicKeyFetchedAt.get(senderId)||0;
+ // Refresh periodically so an old in-memory key cannot be used indefinitely.
+ let keys=cached;
+ if(!keys||Date.now()-fetchedAt>15000){
+  const {data,error}=await client.from("profiles")
+   .select("x25519_public,ed25519_public")
+   .eq("id",senderId)
+   .single();
+  if(error)throw Error("Could not fetch encryption keys for "+senderId+": "+error.message);
+  if(!data?.x25519_public||!data?.ed25519_public)throw Error("This account's Supabase profile is missing an encryption public key: "+senderId);
+  keys=data;
+  // Do not cache a changed key unless the existing fingerprint pin accepts it.
+  publicKeys.delete(senderId);
+  publicKeyFetchedAt.delete(senderId);
+  await checkPeerKeyPin(senderId,keys);
+  publicKeys.set(senderId,keys);
+  publicKeyFetchedAt.set(senderId,Date.now());
+  return keys;
+ }
  return checkPeerKeyPin(senderId,keys);
 }
 async function deriveMessageKey(peerXPublic,salt){
@@ -278,8 +296,8 @@ async function encryptMessage(plain,targetConversation=currentConversation){
  if(!targetConversation?.id)throw Error("Choose a conversation before sending.");
  const recipientIds=currentRecipients(targetConversation.members||[]).sort();
  if(recipientIds.length>32)throw Error("This experimental group-encryption format supports at most 32 members. Larger rooms need a different group-encryption protocol.");
- const missing=[];for(const id of recipientIds){if(id!==user.id){try{await getPeerKeys(id);}catch(e){missing.push(profilesById.get(id)?.username||"a member");}}}
- if(missing.length)throw Error("Message not sent. These members have not initialized or verified encryption keys: "+missing.join(", ")+". Ask them to open Twofold first.");
+ const missing=[];for(const id of recipientIds){if(id!==user.id){try{await getPeerKeys(id);}catch(e){const name=profilesById.get(id)?.username||"a member";missing.push(name+": "+(e?.message||String(e)));}}}
+ if(missing.length)throw Error("Image not sent. Encryption key checks failed:\n"+missing.join("\n"));
  const rawContentKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
  const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
  const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:enc.encode("twofold-message-v3|"+targetConversation.id)},contentKey,enc.encode(plain));
