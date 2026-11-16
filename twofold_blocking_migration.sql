@@ -75,12 +75,14 @@ $$;
 
 -- Replace duplicate/old SELECT policies with one policy per table.
 drop policy if exists "Users can view their conversations" on public.conversations;
+drop policy if exists "Twofold members see visible conversations" on public.conversations;
 create policy "Twofold members see visible conversations"
 on public.conversations for select to authenticated
 using (public.twofold_can_view_conversation(id, auth.uid()));
 
 drop policy if exists "Users can read conversation messages" on public.messages;
 drop policy if exists "Twofold conversation members can read messages" on public.messages;
+drop policy if exists "Twofold members see permitted messages" on public.messages;
 create policy "Twofold members see permitted messages"
 on public.messages for select to authenticated
 using (public.twofold_can_view_message(conversation_id, sender_id, auth.uid()));
@@ -88,6 +90,7 @@ using (public.twofold_can_view_message(conversation_id, sender_id, auth.uid()));
 -- Keep a single INSERT policy. The trigger below performs the block check.
 drop policy if exists "Users can send conversation messages" on public.messages;
 drop policy if exists "Twofold conversation members can send messages" on public.messages;
+drop policy if exists "Twofold members can send messages" on public.messages;
 create policy "Twofold members can send messages"
 on public.messages for insert to authenticated
 with check (
