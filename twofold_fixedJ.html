@@ -245,13 +245,29 @@ async function ensureIdentity(){
  if(error)throw Error("Could not publish your public encryption keys. Run the updated Twofold SQL first. "+error.message);
 }
 async function fingerprint(pub){const h=await crypto.subtle.digest("SHA-256",unb64u(pub));return Array.from(new Uint8Array(h).slice(0,16)).map(x=>x.toString(16).padStart(2,"0")).join("").match(/.{1,4}/g).join(" ").toUpperCase();}
+async function peerKeyFingerprint(keys){
+ const bytes=enc.encode(canon({x:keys.x25519_public,ed:keys.ed25519_public}));
+ const h=await crypto.subtle.digest("SHA-256",bytes);
+ return Array.from(new Uint8Array(h).slice(0,16)).map(x=>x.toString(16).padStart(2,"0")).join("").match(/.{1,4}/g).join(" ").toUpperCase();
+}
 // Peer key pins live in IndexedDB next to the private keys. Old localStorage pins are migrated on first use.
 async function checkPeerKeyPin(peerId,keys){
  const id="pin:"+user.id+":"+peerId,legacy="twofold_peer_key_pin_"+user.id+"_"+peerId;
  const current=JSON.stringify({x:keys.x25519_public,ed:keys.ed25519_public});
  let pinned=await keyDBGet(id);
  if(!pinned){pinned=localStorage.getItem(legacy);if(pinned)await keyDBPut(id,pinned);}
- if(pinned&&pinned!==current)throw Error("SECURITY WARNING: this member’s public encryption key changed. Messages from this account are blocked until the fingerprint change is independently verified. Do not accept a new key based only on an in-app message.");
+ if(pinned&&pinned!==current){
+  const name=profilesById.get(peerId)?.username||"this member";
+  const fp=await peerKeyFingerprint(keys);
+  const entered=prompt("ENCRYPTION KEY CHANGED FOR "+name.toUpperCase()+"\\n\\nNew combined public-key fingerprint:\\n"+fp+"\\n\\nCompare this exact fingerprint with "+name+" through a separate trusted channel (in person or a phone call). If it matches, type or paste the fingerprint below to approve this intentional key replacement. Otherwise press Cancel.\\n\\nApproving replaces only the saved fingerprint on this device.");
+  if((entered||"").trim().toUpperCase()!==fp){
+   throw Error("SECURITY WARNING: this member’s public encryption key changed and has NOT been approved. Messages from this account remain blocked.");
+  }
+  await keyDBPut(id,current);
+  localStorage.removeItem(legacy);
+  publicKeys.delete(peerId);
+  publicKeyFetchedAt.delete(peerId);
+ }
  if(!pinned)await keyDBPut(id,current); // Trust on first use; verify the displayed fingerprint out of band.
  return keys;
 }
@@ -678,8 +694,8 @@ async function selectConversation(c){
  $("mobileConversationSelect").value=c.id;
  $("cryptoStatus").textContent="Experimental encryption · verify member fingerprints";
  const fingerprints=[];
- for(const member of others){const p=profilesById.get(member.user_id);if(p?.ed25519_public){try{await checkPeerKeyPin(member.user_id,p);fingerprints.push((p.username||"Member")+": "+await fingerprint(p.ed25519_public));}catch(e){fingerprints.push((p.username||"Member")+": KEY CHANGE DETECTED");}}}
- $("friendFingerprint").textContent=fingerprints.length?"Member fingerprints (verify separately): "+fingerprints.join(" · "):"";
+ for(const member of others){const p=profilesById.get(member.user_id);if(p?.ed25519_public){try{await checkPeerKeyPin(member.user_id,p);fingerprints.push((p.username||"Member")+": "+await peerKeyFingerprint(p));}catch(e){fingerprints.push((p.username||"Member")+": KEY CHANGE DETECTED");}}}
+ $("friendFingerprint").textContent=fingerprints.length?"Member combined key fingerprints (verify separately): "+fingerprints.join(" · "):"";
  renderConversationList();
  await loadMessages(c.id,token);
  if(token!==selectionVersion||currentConversation?.id!==c.id)return;
@@ -857,7 +873,7 @@ function applyTheme(theme){const allowed=["midnight","ocean","emerald","rose","s
 $("themeSelect").onchange=()=>applyTheme($("themeSelect").value);
 applyTheme(localStorage.getItem("twofold_theme")||"midnight");
 window.addEventListener("beforeunload",()=>{for(const url of renderedObjectUrls)URL.revokeObjectURL(url);if(pendingImageUrl)URL.revokeObjectURL(pendingImageUrl);});
-async function openSettings(){show("settingsModal");$("themeSelect").value=localStorage.getItem("twofold_theme")||"midnight";$("chatbarMode").value=localStorage.getItem("twofold_chatbar_mode")==="draggable"?"draggable":"normal";$("notifyToggle").checked=localStorage.getItem("twofold_notifications")==="on";if(identity){$("keyFingerprint").textContent="Your key fingerprint: "+await fingerprint(identity.edPublic);}try{await refreshFriends();}catch(e){$("friendRequestStatus").textContent="Could not refresh friends: "+(e.message||String(e));}}
+async function openSettings(){show("settingsModal");$("themeSelect").value=localStorage.getItem("twofold_theme")||"midnight";$("chatbarMode").value=localStorage.getItem("twofold_chatbar_mode")==="draggable"?"draggable":"normal";$("notifyToggle").checked=localStorage.getItem("twofold_notifications")==="on";if(identity){$("keyFingerprint").textContent="Your combined public-key fingerprint: "+await peerKeyFingerprint({x25519_public:identity.xPublic,ed25519_public:identity.edPublic})+" (share this for independent verification)";}try{await refreshFriends();}catch(e){$("friendRequestStatus").textContent="Could not refresh friends: "+(e.message||String(e));}}
 $("settingsBtn").onclick=openSettings;$("mobileSettings").onclick=openSettings;$("closeSettings").onclick=()=>show("settingsModal",false);
 function adminTarget(){const id=$("adminTarget").value;if(!id)throw Error("Choose an approved account first.");return id;}
 async function runAdminAction(label,fn){const status=$("adminStatus");status.textContent=label+"…";try{await fn();status.textContent=label+" completed.";}catch(e){status.textContent=label+" failed: "+(e.message||String(e));}}
