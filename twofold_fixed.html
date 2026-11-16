@@ -295,12 +295,24 @@ async function unwrapContentKey(envelope){
  const wrappingKey=await deriveMessageKeyV3(senderPublic,unb64u(recipient.salt));
  return crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(recipient.iv),additionalData:enc.encode("twofold-wrap-v2")},wrappingKey,unb64u(recipient.wrapped));
 }
+async function resolveEncryptionRecipients(targetConversation,contentLabel){
+ const ids=currentRecipients(targetConversation.members||[]).sort();
+ if(ids.length>32)throw Error("This experimental group-encryption format supports at most 32 members. Larger rooms need a different group-encryption protocol.");
+ const valid=[],missing=[];
+ for(const id of ids){
+  if(id===user.id){valid.push(id);continue;}
+  try{await getPeerKeys(id);valid.push(id);}
+  catch(e){const name=profilesById.get(id)?.username||"a member";missing.push(name+": "+(e?.message||String(e)));}
+ }
+ // Global Chat is best-effort per recipient: one unavailable or untrusted key
+ // must not prevent healthy members from sending and receiving messages.
+ if(missing.length&&targetConversation.type!=="global")throw Error(contentLabel+" not sent. Encryption key checks failed:\n"+missing.join("\n"));
+ if(missing.length)console.warn("Twofold Global Chat skipped unavailable encryption recipients:",missing);
+ return valid;
+}
 async function encryptMessage(plain,targetConversation=currentConversation){
  if(!targetConversation?.id)throw Error("Choose a conversation before sending.");
- const recipientIds=currentRecipients(targetConversation.members||[]).sort();
- if(recipientIds.length>32)throw Error("This experimental group-encryption format supports at most 32 members. Larger rooms need a different group-encryption protocol.");
- const missing=[];for(const id of recipientIds){if(id!==user.id){try{await getPeerKeys(id);}catch(e){const name=profilesById.get(id)?.username||"a member";missing.push(name+": "+(e?.message||String(e)));}}}
- if(missing.length)throw Error("Message not sent. Encryption key checks failed:\n"+missing.join("\n"));
+ const recipientIds=await resolveEncryptionRecipients(targetConversation,"Message");
  const rawContentKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
  const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
  const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:enc.encode("twofold-message-v3|"+targetConversation.id)},contentKey,enc.encode(plain));
@@ -313,10 +325,7 @@ async function encryptImageFile(file,targetConversation=currentConversation){
  if(!targetConversation?.id)throw Error("Choose a conversation before sending an image.");
  if(!file||!["image/jpeg","image/png","image/webp","image/gif","image/avif"].includes(file.type))throw Error("Choose a JPEG, PNG, WebP, GIF, or AVIF image.");
  if(file.size>5*1024*1024)throw Error("Images must be 5 MB or smaller.");
- const recipientIds=currentRecipients(targetConversation.members||[]).sort();
- if(recipientIds.length>32)throw Error("This experimental group-encryption format supports at most 32 members.");
- const missing=[];for(const id of recipientIds){if(id!==user.id){try{await getPeerKeys(id);}catch(e){missing.push((profilesById.get(id)?.username||"a member")+": "+(e?.message||String(e)));}}}
- if(missing.length)throw Error("Image not sent. Encryption key checks failed:\n"+missing.join("\n"));
+ const recipientIds=await resolveEncryptionRecipients(targetConversation,"Image");
  const rawContentKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
  const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
  const plain=new Uint8Array(await file.arrayBuffer());
