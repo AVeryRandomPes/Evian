@@ -91,6 +91,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .blocked-list{display:grid;gap:7px}
 .blocked-user-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--panel2);border-radius:10px}
 .blocked-user-row button{padding:7px 10px;flex:0 0 auto}
+.admin-panel{border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:13px;display:grid;gap:10px}.admin-panel h3{font-size:14px;margin:0}.admin-panel .field input,.admin-panel .field select{width:100%;background:var(--input);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px}.admin-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.admin-actions button{min-width:0;padding:9px 8px}
 @media(max-width:680px){
 .wrap{padding:10px;min-height:480px}.brand{margin-bottom:10px}
 .chat{grid-template-columns:minmax(0,1fr)}.side{display:none}
@@ -162,6 +163,16 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <p class="small muted">Off by default. If enabled, notifications are only requested after you turn this on. Your browser may still require notification permission. No sound is played by this app.</p>
     <button class="secondary" id="enableNotifications">Enable notifications</button>
     <div class="notice">Experimental encryption: X25519 key agreement, HKDF-SHA-256, AES-256-GCM, and Ed25519 signatures. This custom protocol has not had an independent security audit and does not provide forward secrecy. Private keys are stored only in this browser profile; there is no recovery or multi-device backup yet. Verify every member’s fingerprint through a separate trusted channel before relying on message authenticity.</div><div class="small muted" id="friendFingerprint"></div><div class="small muted" id="keyFingerprint"></div>
+    <div id="adminPanel" class="admin-panel hidden">
+      <h3>Administrator tools</h3>
+      <p class="small muted">These actions are enforced by Supabase. Global mutes do not affect direct or group messages.</p>
+      <div class="field"><label for="adminTarget">Approved account</label><select id="adminTarget"></select></div>
+      <div class="field"><label for="adminReason">Ban reason (optional)</label><input id="adminReason" maxlength="300" placeholder="Reason for ban"></div>
+      <div class="field"><label for="adminDuration">Mute duration in minutes</label><input id="adminDuration" type="number" min="1" max="525600" value="60"></div>
+      <div class="admin-actions"><button id="adminBan" class="danger">Ban account</button><button id="adminUnban" class="secondary">Unban account</button><button id="adminMuteGlobal" class="secondary">Mute in Global</button><button id="adminUnmuteGlobal" class="secondary">Unmute in Global</button></div>
+      <button id="adminClearGlobal" class="danger">Delete every Global Chat message</button>
+      <div id="adminStatus" class="small muted"></div>
+    </div>
     <div id="settingsMessage" class="success"></div>
     <button class="danger" id="settingsSignOut">Sign out</button>
   </div>
@@ -185,7 +196,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 (() => {
 "use strict";
 const $ = id => document.getElementById(id);
-let client=null, user=null, profile=null, channel=null, messageChannel=null, authSubscription=null, membershipChannel=null, conversationRefreshTimer=null, members=[], approvedMembers=[], conversations=[], conversationMembers=[], currentConversation=null, typingTimer=null, typingOffTimer=null, typingLastSentAt=0, lastMessageId=0, seenIds=new Set(), identity=null, publicKeys=new Map(), publicKeyFetchedAt=new Map(), profilesById=new Map(), selectionVersion=0, unreadCounts={}, renderedObjectUrls=new Set(), mode="login";
+let client=null, user=null, profile=null, channel=null, messageChannel=null, authSubscription=null, membershipChannel=null, conversationRefreshTimer=null, members=[], approvedMembers=[], conversations=[], conversationMembers=[], currentConversation=null, typingTimer=null, typingOffTimer=null, typingLastSentAt=0, lastMessageId=0, seenIds=new Set(), identity=null, publicKeys=new Map(), publicKeyFetchedAt=new Map(), profilesById=new Map(), selectionVersion=0, unreadCounts={}, renderedObjectUrls=new Set(), mode="login", isAdmin=false;
 const show = (id,on=true)=>$(id).classList.toggle("hidden",!on);
 const err = (id,msg)=>$(id).textContent=msg||"";
 const initials = s => (s||"?").trim().slice(0,1).toUpperCase();
@@ -399,6 +410,9 @@ $("authForm").onsubmit=async e=>{e.preventDefault();err("authError","");err("aut
 async function enterChat(){
  try{unreadCounts=JSON.parse(localStorage.getItem("twofold_unread_"+user.id)||"{}");}catch(e){unreadCounts={};}
  show("auth",false);show("setup",false);show("chat");applyChatbarMode();
+ const {data:banned,error:banError}=await client.rpc("twofold_is_banned");if(banError)throw Error("Could not verify account status: "+banError.message);
+ if(banned){show("chat",false);await client.auth.signOut();show("auth");err("authError","This Twofold account is banned. Contact the project administrator if you believe this is a mistake.");return;}
+ const {data:adminStatus,error:adminError}=await client.rpc("twofold_is_admin");if(adminError)throw Error("Could not verify administrator status: "+adminError.message);isAdmin=adminStatus===true;show("adminPanel",isAdmin);
  const {data:own,error:pe}=await client.from("profiles").select("*").eq("id",user.id).maybeSingle();if(pe)throw pe;
  profile=own;
  if(!profile){const name=(user.user_metadata?.username||user.email?.split("@")[0]||"Friend").slice(0,24);const {data,error}=await client.from("profiles").insert({id:user.id,username:name}).select().single();if(error)throw error;profile=data;}
@@ -410,6 +424,7 @@ async function enterChat(){
  profilesById.set(user.id,{id:user.id,username:profile.username,x25519_public:identity.xPublic,ed25519_public:identity.edPublic});
  publicKeys.set(user.id,{x25519_public:identity.xPublic,ed25519_public:identity.edPublic});
  await loadConversations();
+ if(isAdmin)await refreshAdminTargets();
  await connectConversationRealtime();
  await connectMessageRealtime();
 }
@@ -481,7 +496,7 @@ async function openConversationMenu(c,x,y,memberId=null){
  const menu=$("conversationContextMenu");contextConversation=c;contextMemberId=memberId;menu.innerHTML="";
  const addHeading=t=>{const h=document.createElement("div");h.className="menu-heading";h.textContent=t;menu.append(h);};
  const separator=()=>{const d=document.createElement("div");d.className="menu-separator";menu.append(d);};
- if(c.type==="global"){addHeading("Global chat");addMenuButton(menu,"Close",closeConversationMenu);menu.style.left=Math.max(8,Math.min(innerWidth-220,x))+"px";menu.style.top=Math.max(8,Math.min(innerHeight-100,y))+"px";show("conversationContextMenu");return;}
+ if(c.type==="global"){addHeading("Global chat");if(isAdmin)addMenuButton(menu,"Delete every Global message",async()=>{if(!confirm("Permanently delete every message in Global Chat? This cannot be undone."))return;const {data,error}=await client.rpc("twofold_clear_global_chat");if(error)throw error;if(currentConversation?.id===c.id)await selectConversation(c);alert("Deleted "+(Number(data)||0)+" Global Chat messages.");},"danger");addMenuButton(menu,"Close",closeConversationMenu);menu.style.left=Math.max(8,Math.min(innerWidth-220,x))+"px";menu.style.top=Math.max(8,Math.min(innerHeight-100,y))+"px";show("conversationContextMenu");return;}
  if(c.type==="group"&&!memberId){
   addHeading(c.name||"Group chat");
   addMenuButton(menu,"Close group chat",()=>closeConversation(c));
@@ -496,6 +511,12 @@ async function openConversationMenu(c,x,y,memberId=null){
   else{
    const p=profilesById.get(targetId),name=p?.username||"Member";
    addHeading(memberId?"Member actions":"Direct message");
+   if(memberId&&c.type==="group"&&(isAdmin||c.created_by===user.id)){
+    separator();addHeading("Group moderation");
+    addMenuButton(menu,"Mute in this group…",async()=>{const raw=prompt("Mute duration in minutes (1–525600):","60");if(raw===null)return;const duration=Number(raw);if(!Number.isInteger(duration)||duration<1||duration>525600)throw Error("Enter a whole number from 1 to 525600.");const {error}=await client.rpc("twofold_mute_group",{target_conversation:c.id,target_user:targetId,duration_minutes:duration});if(error)throw error;alert(name+" muted in this group for "+duration+" minutes.");});
+    addMenuButton(menu,"Unmute in this group",async()=>{const {error}=await client.rpc("twofold_unmute_group",{target_conversation:c.id,target_user:targetId});if(error)throw error;alert(name+" unmuted in this group.");});
+    addMenuButton(menu,"Remove from group",async()=>{if(!confirm("Remove "+name+" from "+(c.name||"this group")+"?"))return;const {error}=await client.rpc("twofold_kick_group_member",{target_conversation:c.id,target_user:targetId});if(error)throw error;await loadConversations();const active=conversations.find(x=>x.id===c.id);if(active)await selectConversation(active);else if(conversations.length)await selectConversation(conversations.find(x=>x.type==="global")||conversations[0]);},"danger");
+   }
    if(!memberId)addMenuButton(menu,"Close DM",()=>closeConversation(c));
    const contact=await isContact(targetId);
    if(!memberId)separator();
@@ -519,6 +540,14 @@ async function closeConversation(c){
  await loadConversations();
 }
 let blockedUserIds=new Set();
+async function refreshAdminTargets(){
+ if(!isAdmin)return;
+ const select=$("adminTarget");select.innerHTML="";
+ const {data,error}=await client.from("profiles").select("id,username").in("id",approvedMembers.map(m=>m.user_id));
+ if(error)throw error;
+ for(const p of (data||[]).filter(p=>p.id!==user.id).sort((a,b)=>a.username.localeCompare(b.username))){const option=document.createElement("option");option.value=p.id;option.textContent=p.username||p.id;select.append(option);}
+ if(!select.options.length){const option=document.createElement("option");option.value="";option.textContent="No other approved accounts";select.append(option);}
+}
 async function refreshBlockedUsers(){
  const {data,error}=await client.from("blocked_users").select("blocked_id").eq("blocker_id",user.id);
  if(error)throw error;blockedUserIds=new Set((data||[]).map(x=>x.blocked_id));
@@ -728,6 +757,13 @@ applyTheme(localStorage.getItem("twofold_theme")||"midnight");
 window.addEventListener("beforeunload",()=>{for(const url of renderedObjectUrls)URL.revokeObjectURL(url);if(pendingImageUrl)URL.revokeObjectURL(pendingImageUrl);});
 async function openSettings(){show("settingsModal");$("themeSelect").value=localStorage.getItem("twofold_theme")||"midnight";$("chatbarMode").value=localStorage.getItem("twofold_chatbar_mode")==="draggable"?"draggable":"normal";$("notifyToggle").checked=localStorage.getItem("twofold_notifications")==="on";if(identity){$("keyFingerprint").textContent="Your key fingerprint: "+await fingerprint(identity.edPublic);}}
 $("settingsBtn").onclick=openSettings;$("mobileSettings").onclick=openSettings;$("closeSettings").onclick=()=>show("settingsModal",false);
+function adminTarget(){const id=$("adminTarget").value;if(!id)throw Error("Choose an approved account first.");return id;}
+async function runAdminAction(label,fn){const status=$("adminStatus");status.textContent=label+"…";try{await fn();status.textContent=label+" completed.";}catch(e){status.textContent=label+" failed: "+(e.message||String(e));}}
+$("adminBan").onclick=()=>runAdminAction("Ban",async()=>{const id=adminTarget();if(!confirm("Ban "+$("adminTarget").selectedOptions[0].textContent+" from Twofold?"))return;const {error}=await client.rpc("twofold_ban_user",{target_user:id,ban_reason:$("adminReason").value.trim()||null});if(error)throw error;});
+$("adminUnban").onclick=()=>runAdminAction("Unban",async()=>{const id=adminTarget();const {error}=await client.rpc("twofold_unban_user",{target_user:id});if(error)throw error;});
+$("adminMuteGlobal").onclick=()=>runAdminAction("Global mute",async()=>{const id=adminTarget(),duration=Number($("adminDuration").value);if(!Number.isInteger(duration)||duration<1||duration>525600)throw Error("Mute duration must be 1–525600 whole minutes.");const {error}=await client.rpc("twofold_mute_global",{target_user:id,duration_minutes:duration});if(error)throw error;});
+$("adminUnmuteGlobal").onclick=()=>runAdminAction("Global unmute",async()=>{const id=adminTarget();const {error}=await client.rpc("twofold_unmute_global",{target_user:id});if(error)throw error;});
+$("adminClearGlobal").onclick=()=>runAdminAction("Clear Global Chat",async()=>{if(!confirm("Permanently delete every message in Global Chat? This cannot be undone."))return;const {data,error}=await client.rpc("twofold_clear_global_chat");if(error)throw error;if(currentConversation?.type==="global")await selectConversation(currentConversation);$("adminStatus").textContent="Deleted "+(Number(data)||0)+" Global Chat messages.";});
 $("saveUsername").onclick=async()=>{const username=$("editUsername").value.trim();if(!username||username.length>24){err("settingsMessage","Username must be 1–24 characters.");return;}const {data,error}=await client.from("profiles").update({username,updated_at:new Date().toISOString()}).eq("id",user.id).select().single();if(error){err("settingsMessage",error.message);return;}profile=data;$("myName").textContent=username;$("myAvatar").textContent=initials(username);err("settingsMessage","Username updated.");};
 $("notifyToggle").onchange=()=>{if($("notifyToggle").checked){$("notifyToggle").checked=false;err("settingsMessage","Use Enable notifications below to grant browser permission.");}else{localStorage.setItem("twofold_notifications","off");err("settingsMessage","Notifications are off.");}};
 $("enableNotifications").onclick=async()=>{if(!("Notification"in window)){err("settingsMessage","This browser does not support notifications.");return;}const permission=await Notification.requestPermission();if(permission==="granted"){localStorage.setItem("twofold_notifications","on");$("notifyToggle").checked=true;err("settingsMessage","Notifications enabled. You can turn them off here.");}else{localStorage.setItem("twofold_notifications","off");$("notifyToggle").checked=false;err("settingsMessage","Permission was not granted. Notifications remain off.");}};
