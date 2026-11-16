@@ -64,7 +64,12 @@ as $$
     )
     and (
       message_sender_id = viewer_id
-      or not public.twofold_is_blocked_between(viewer_id, message_sender_id)
+      or not exists (
+        select 1
+        from public.blocked_users b
+        where b.blocker_id = viewer_id
+          and b.blocked_id = message_sender_id
+      )
     );
 $$;
 
