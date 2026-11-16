@@ -81,6 +81,16 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .divider{height:1px;background:var(--line);width:100%;margin:4px 0}
 .unread-badge{display:inline-block;float:right;min-width:19px;padding:1px 6px;border-radius:99px;background:var(--accent);color:#10131b;text-align:center;font-size:11px;font-weight:800}
 .foot{flex:0 0 auto;text-align:center;color:#718097;font-size:11px;margin-top:8px;padding:4px 0}
+.conversation-item{touch-action:pan-y}
+.context-menu{position:fixed;z-index:1000;min-width:210px;max-width:min(290px,calc(100vw - 20px));max-height:min(70vh,520px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 16px 45px #000a}
+.context-menu button{display:block;width:100%;text-align:left;background:transparent;color:var(--text);border:0;border-radius:8px;padding:10px 12px;font-weight:600}
+.context-menu button:hover{background:var(--panel2)}
+.context-menu button.danger{color:#ff9b9b;background:transparent}
+.context-menu .menu-heading{padding:8px 10px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.context-menu .menu-separator{height:1px;background:var(--line);margin:5px 2px}
+.blocked-list{display:grid;gap:7px}
+.blocked-user-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--panel2);border-radius:10px}
+.blocked-user-row button{padding:7px 10px;flex:0 0 auto}
 @media(max-width:680px){
 .wrap{padding:10px;min-height:480px}.brand{margin-bottom:10px}
 .chat{grid-template-columns:minmax(0,1fr)}.side{display:none}
@@ -144,6 +154,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <div class="field"><label for="editUsername">Your username</label><input id="editUsername" maxlength="24"></div>
     <button id="saveUsername">Save username</button>
     <div class="divider"></div>
+    <div class="field"><label>Blocked users</label><div id="blockedUsersList" class="blocked-list"><div class="small muted">Loading blocked users…</div></div><p class="small muted">Blocked users cannot start direct conversations with you. Their messages are hidden from you, including in shared groups.</p></div>
+    <div class="divider"></div>
     <div class="field"><label for="themeSelect">Appearance theme</label><select id="themeSelect" style="width:100%;background:var(--input);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:12px"><option value="midnight">Midnight</option><option value="ocean">Ocean</option><option value="emerald">Emerald</option><option value="rose">Rose</option><option value="sunset">Sunset</option><option value="light">Light</option></select><p class="small muted">Themes are saved on this device.</p></div>
     <div class="field"><label for="chatbarMode">Chatbar position</label><select id="chatbarMode" style="width:100%;background:var(--input);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:12px"><option value="normal">NORMAL · Keep it at the bottom</option><option value="draggable">DRAGABLE · Move it anywhere</option></select><p class="small muted">In DRAGABLE mode, drag the grip on the left side of the chatbar. Its position is saved on this device.</p></div>
     <label class="toggle"><input type="checkbox" id="notifyToggle"> Enable browser notifications</label>
@@ -154,6 +166,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <button class="danger" id="settingsSignOut">Sign out</button>
   </div>
 </div>
+
+<div id="conversationContextMenu" class="context-menu hidden" role="menu" aria-label="Conversation actions"></div>
 
 <div id="imagePreviewModal" class="modal hidden" style="z-index:40">
   <div class="card stack" style="width:min(520px,100%)">
@@ -406,6 +420,7 @@ async function enterChat(){
  const {data:mem,error:me}=await client.from("chat_members").select("user_id");if(me)throw me;approvedMembers=mem||[];members=approvedMembers;
  if(!members.some(m=>m.user_id===user.id)){show("chat",false);show("auth");err("authError","Your account has not been added to this Twofold project yet. Ask the project owner to approve the email address on this account.");return;}
  await ensureIdentity();
+ await refreshBlockedUsers();
  profilesById.set(user.id,{id:user.id,username:profile.username,x25519_public:identity.xPublic,ed25519_public:identity.edPublic});
  publicKeys.set(user.id,{x25519_public:identity.xPublic,ed25519_public:identity.edPublic});
  await loadConversations();
@@ -454,12 +469,83 @@ function renderConversationList(){
   const b=document.createElement("button");b.type="button";b.className="conversation-item"+(currentConversation?.id===c.id?" active":"");
   b.textContent=(c.type==="global"?"🌐 ":c.type==="group"?"👥 ":"✉️ ")+conversationLabel(c);
   const unread=unreadCounts[c.id]||0;if(unread){const badge=document.createElement("span");badge.className="unread-badge";badge.textContent=unread>99?"99+":String(unread);b.append(badge);}
-  b.onclick=()=>selectConversation(c);list.append(b);
+  b.onclick=()=>selectConversation(c);
+  b.addEventListener("contextmenu",e=>{e.preventDefault();openConversationMenu(c,e.clientX,e.clientY);});
+  let holdTimer=null;
+  b.addEventListener("pointerdown",e=>{if(e.pointerType!=="touch")return;holdTimer=setTimeout(()=>openConversationMenu(c,e.clientX,e.clientY),550);});
+  for(const ev of ["pointerup","pointercancel","pointerleave"])b.addEventListener(ev,()=>{if(holdTimer){clearTimeout(holdTimer);holdTimer=null;}});
+  list.append(b);
  }
  const select=$("mobileConversationSelect");select.innerHTML="";
  for(const c of conversations){const o=document.createElement("option");o.value=c.id;o.textContent=conversationLabel(c);select.append(o);}
  if(currentConversation)select.value=currentConversation.id;
 }
+let contextConversation=null,contextMemberId=null;
+function closeConversationMenu(){show("conversationContextMenu",false);contextConversation=null;contextMemberId=null;}
+function addMenuButton(menu,label,action,kind=""){
+ const b=document.createElement("button");b.type="button";b.textContent=label;if(kind)b.className=kind;
+ b.onclick=async()=>{try{closeConversationMenu();await action();}catch(e){alert(e.message||String(e));}};
+ menu.append(b);return b;
+}
+async function isContact(targetId){
+ const {data,error}=await client.from("friend_requests").select("sender_id,receiver_id").eq("status","accepted").or("and(sender_id.eq."+user.id+",receiver_id.eq."+targetId+"),and(sender_id.eq."+targetId+",receiver_id.eq."+user.id+")").limit(1);
+ if(error)throw error;return !!data?.length;
+}
+async function openConversationMenu(c,x,y,memberId=null){
+ const menu=$("conversationContextMenu");contextConversation=c;contextMemberId=memberId;menu.innerHTML="";
+ const addHeading=t=>{const h=document.createElement("div");h.className="menu-heading";h.textContent=t;menu.append(h);};
+ const separator=()=>{const d=document.createElement("div");d.className="menu-separator";menu.append(d);};
+ if(c.type==="global"){addHeading("Global chat");addMenuButton(menu,"Close",closeConversationMenu);menu.style.left=Math.max(8,Math.min(innerWidth-220,x))+"px";menu.style.top=Math.max(8,Math.min(innerHeight-100,y))+"px";show("conversationContextMenu");return;}
+ if(c.type==="group"&&!memberId){
+  addHeading(c.name||"Group chat");
+  addMenuButton(menu,"Close group chat",()=>closeConversation(c));
+  separator();addHeading("Group members");
+  for(const m of (c.members||[])){
+   if(m.user_id===user.id)continue;
+   const p=profilesById.get(m.user_id);addMenuButton(menu,p?.username||"Member",()=>openConversationMenu(c,x,y,m.user_id));
+  }
+ }else{
+  const targetId=memberId||(c.members||[]).find(m=>m.user_id!==user.id)?.user_id;
+  if(!targetId){addMenuButton(menu,"Close DM",()=>closeConversation(c));}
+  else{
+   const p=profilesById.get(targetId),name=p?.username||"Member";
+   addHeading(memberId?"Member actions":"Direct message");
+   if(!memberId)addMenuButton(menu,"Close DM",()=>closeConversation(c));
+   const contact=await isContact(targetId);
+   if(!memberId)separator();
+   addMenuButton(menu,blockedUserIds.has(targetId)?"Unblock User":"Block User",async()=>{if(blockedUserIds.has(targetId)){const {error}=await client.rpc("twofold_unblock_user",{blocked_user:targetId});if(error)throw error;blockedUserIds.delete(targetId);}else{const {error}=await client.rpc("twofold_block_user",{blocked_user:targetId});if(error)throw error;blockedUserIds.add(targetId);}await refreshBlockedUsers();await loadConversations();},blockedUserIds.has(targetId)?"":"danger");
+   addMenuButton(menu,contact?"Remove User":"Add User",async()=>{
+    if(contact){const {error}=await client.rpc("twofold_remove_friend",{friend_user:targetId});if(error)throw error;}
+    else{if(!p?.username)throw Error("This member's username is unavailable.");const {error}=await client.rpc("twofold_send_friend_request",{target_username:p.username});if(error)throw error;}
+    alert(contact?"Contact removed.":"Contact request sent or accepted.");
+   });
+   if(memberId)addMenuButton(menu,"Back to group",()=>openConversationMenu(c,x,y));
+  }
+ }
+ menu.style.left=Math.max(8,Math.min(innerWidth-menu.offsetWidth-8,x))+"px";
+ menu.style.top=Math.max(8,Math.min(innerHeight-menu.offsetHeight-8,y))+"px";
+ show("conversationContextMenu");
+}
+async function closeConversation(c){
+ const {error}=await client.from("conversation_user_settings").upsert({conversation_id:c.id,user_id:user.id,hidden_at:new Date().toISOString()},{onConflict:"conversation_id,user_id"});
+ if(error)throw error;
+ if(currentConversation?.id===c.id){currentConversation=null;selectionVersion++;if(channel){await client.removeChannel(channel);channel=null;}const global=conversations.find(x=>x.type==="global"&&x.id!==c.id);if(global)await selectConversation(global);}
+ await loadConversations();
+}
+let blockedUserIds=new Set();
+async function refreshBlockedUsers(){
+ const {data,error}=await client.from("blocked_users").select("blocked_id").eq("blocker_id",user.id);
+ if(error)throw error;blockedUserIds=new Set((data||[]).map(x=>x.blocked_id));
+ const list=$("blockedUsersList");if(!list)return;list.innerHTML="";
+ if(!blockedUserIds.size){const empty=document.createElement("div");empty.className="small muted";empty.textContent="You haven't blocked anyone.";list.append(empty);return;}
+ const ids=[...blockedUserIds];
+ const {data:rows,error:profileError}=await client.from("profiles").select("id,username").in("id",ids);
+ if(profileError)throw profileError;
+ for(const id of ids){const row=document.createElement("div");row.className="blocked-user-row";const name=document.createElement("strong");name.textContent=rows?.find(p=>p.id===id)?.username||"Unknown user";const button=document.createElement("button");button.type="button";button.className="secondary";button.textContent="Unblock";button.onclick=async()=>{button.disabled=true;const {error}=await client.rpc("twofold_unblock_user",{blocked_user:id});if(error){button.disabled=false;alert(error.message);return;}await refreshBlockedUsers();await loadConversations();};row.append(name,button);list.append(row);}
+}
+document.addEventListener("click",e=>{if(!$("conversationContextMenu").contains(e.target))closeConversationMenu();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeConversationMenu();});
+window.addEventListener("resize",closeConversationMenu);
 async function selectConversation(c){
  if(!c)return;
  const token=++selectionVersion;
@@ -654,7 +740,7 @@ function applyTheme(theme){const allowed=["midnight","ocean","emerald","rose","s
 $("themeSelect").onchange=()=>applyTheme($("themeSelect").value);
 applyTheme(localStorage.getItem("twofold_theme")||"midnight");
 window.addEventListener("beforeunload",()=>{for(const url of renderedObjectUrls)URL.revokeObjectURL(url);if(pendingImageUrl)URL.revokeObjectURL(pendingImageUrl);});
-async function openSettings(){show("settingsModal");$("themeSelect").value=localStorage.getItem("twofold_theme")||"midnight";$("chatbarMode").value=localStorage.getItem("twofold_chatbar_mode")==="draggable"?"draggable":"normal";$("notifyToggle").checked=localStorage.getItem("twofold_notifications")==="on";if(identity){$("keyFingerprint").textContent="Your key fingerprint: "+await fingerprint(identity.edPublic);}}
+async async async function openSettings(){show("settingsModal");$("themeSelect").value=localStorage.getItem("twofold_theme")||"midnight";$("chatbarMode").value=localStorage.getItem("twofold_chatbar_mode")==="draggable"?"draggable":"normal";$("notifyToggle").checked=localStorage.getItem("twofold_notifications")==="on";if(identity){$("keyFingerprint").textContent="Your key fingerprint: "+await fingerprint(identity.edPublic);}}
 $("settingsBtn").onclick=openSettings;$("mobileSettings").onclick=openSettings;$("closeSettings").onclick=()=>show("settingsModal",false);
 $("saveUsername").onclick=async()=>{const username=$("editUsername").value.trim();if(!username||username.length>24){err("settingsMessage","Username must be 1–24 characters.");return;}const {data,error}=await client.from("profiles").update({username,updated_at:new Date().toISOString()}).eq("id",user.id).select().single();if(error){err("settingsMessage",error.message);return;}profile=data;$("myName").textContent=username;$("myAvatar").textContent=initials(username);err("settingsMessage","Username updated.");};
 $("notifyToggle").onchange=()=>{if($("notifyToggle").checked){$("notifyToggle").checked=false;err("settingsMessage","Use Enable notifications below to grant browser permission.");}else{localStorage.setItem("twofold_notifications","off");err("settingsMessage","Notifications are off.");}};
