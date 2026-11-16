@@ -12,21 +12,85 @@ body[data-theme="emerald"]{--bg:#091811;--panel:#14251b;--panel2:#1d3527;--line:
 body[data-theme="rose"]{--bg:#1b1018;--panel:#291923;--panel2:#3a2431;--line:#573747;--text:#fff0f5;--muted:#c9a6b5;--accent:#f29abb;--accent2:#d76d98;--surface:#21141d;--surface2:#2b1924;--input:#180f16;--bubble:#3b2634;--bubbleMine:#65364f;--bubbleBorder:#593849;--bubbleMineBorder:#8b4a6b}
 body[data-theme="sunset"]{--bg:#21130f;--panel:#302019;--panel2:#452b20;--line:#68402d;--text:#fff3e8;--muted:#d0ad96;--accent:#ffb36b;--accent2:#e57b42;--surface:#291811;--surface2:#352016;--input:#1d110d;--bubble:#4a2c20;--bubbleMine:#704026;--bubbleBorder:#71442e;--bubbleMineBorder:#a65e35}
 body[data-theme="light"]{color-scheme:light;--bg:#eef2f8;--panel:#ffffff;--panel2:#e8edf5;--line:#d1d9e5;--text:#182235;--muted:#65738a;--accent:#526bd6;--accent2:#4056b8;--good:#238653;--danger:#b93e4b;--surface:#f8faff;--surface2:#edf1f8;--input:#ffffff;--bubble:#e8edf6;--bubbleMine:#dce4ff;--bubbleBorder:#d4dceb;--bubbleMineBorder:#bdc9f5}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,var(--panel2) 0,var(--bg) 58%);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh;min-height:100dvh}
-button,input{font:inherit}button{cursor:pointer;border:0;border-radius:11px;padding:11px 15px;background:var(--accent);color:#10131b;font-weight:700}button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}button.danger{background:#4a252c;color:#ffd9dd}button:disabled{opacity:.5;cursor:not-allowed}
-.wrap{max-width:1050px;margin:auto;padding:24px 16px 40px}.brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#a9b5ff,#6979e6);display:grid;place-items:center;color:#111629;font-weight:900;font-size:20px}.brand h1{font-size:20px;margin:0}.brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 18px 55px #0003}.hidden{display:none!important}.muted{color:var(--muted)}.small{font-size:12px}.stack{display:grid;gap:13px}.field{display:grid;gap:6px}.field label{font-size:13px;color:var(--muted)}.field input{width:100%;background:var(--input);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:12px;outline:none}.field input:focus{border-color:var(--accent)}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.notice{border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:12px;color:var(--text);font-size:13px}.error{color:#ffaaaa;font-size:13px;white-space:pre-wrap}.success{color:var(--good);font-size:13px}
-.auth{max-width:480px;margin:7vh auto}.auth h2{margin:0 0 5px}.tabs{display:flex;gap:8px;margin:16px 0}.tabs button{flex:1}.tabs button.active{background:var(--accent);color:#10131b}.chat{height:clamp(360px,calc(100dvh - 150px),780px);min-height:0;display:grid;grid-template-columns:260px minmax(0,1fr);overflow:hidden;padding:0}.side{padding:20px;border-right:1px solid var(--line);background:var(--surface2)}.side h2{font-size:16px;margin:0 0 5px}.profile{padding:14px;background:var(--panel2);border-radius:13px;margin:18px 0}.avatar{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:#39456c;color:white;font-weight:800}.person{display:flex;align-items:center;gap:10px}.person strong{display:block;font-size:13px}.status{font-size:11px;color:var(--muted)}.dot{display:inline-block;width:7px;height:7px;background:#657187;border-radius:50%;margin-right:5px}.dot.online{background:var(--good);box-shadow:0 0 8px #6ed6a2}.side-actions{display:grid;gap:8px;margin-top:18px}.side-actions button{width:100%}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,var(--panel2) 0,var(--bg) 58%);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh;min-height:100dvh}
+button,input,select{font:inherit}
+button{cursor:pointer;border:0;border-radius:11px;padding:11px 15px;background:var(--accent);color:#10131b;font-weight:700}
+button.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+button.danger{background:#4a252c;color:#ffd9dd}
+button:disabled{opacity:.5;cursor:not-allowed}
+.wrap{width:100%;max-width:1082px;height:100dvh;min-height:560px;margin:0 auto;padding:12px 16px;display:flex;flex-direction:column}
+.brand{flex:0 0 auto;display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#a9b5ff,#6979e6);display:grid;place-items:center;color:#111629;font-weight:900;font-size:20px}
+.brand h1{font-size:20px;margin:0}.brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 18px 55px #0003}
+.hidden{display:none!important}.muted{color:var(--muted)}.small{font-size:12px}.stack{display:grid;gap:13px}
+.field{display:grid;gap:6px}.field label{font-size:13px;color:var(--muted)}
+.field input{width:100%;background:var(--input);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:12px;outline:none}
+.field input:focus{border-color:var(--accent)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+.notice{border:1px solid var(--line);background:var(--panel2);border-radius:12px;padding:12px;color:var(--text);font-size:13px}
+.error{color:#ffaaaa;font-size:13px;white-space:pre-wrap}.success{color:var(--good);font-size:13px}
+.auth{max-width:480px;margin:7vh auto;width:100%;overflow:auto}.auth h2{margin:0 0 5px}
+.tabs{display:flex;gap:8px;margin:16px 0}.tabs button{flex:1}.tabs button.active{background:var(--accent);color:#10131b}
+.chat{flex:1 1 0;min-height:0;min-width:0;display:grid;grid-template-columns:260px minmax(0,1fr);grid-template-rows:minmax(0,1fr);overflow:hidden;padding:0}
+.side{padding:20px;border-right:1px solid var(--line);background:var(--surface2);min-height:0;overflow-y:auto}
+.side h2{font-size:16px;margin:0 0 5px}
+.profile{padding:14px;background:var(--panel2);border-radius:13px;margin:18px 0}
+.avatar{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:#39456c;color:white;font-weight:800}
+.person{display:flex;align-items:center;gap:10px}.person strong{display:block;font-size:13px}
+.status{font-size:11px;color:var(--muted)}
+.dot{display:inline-block;width:7px;height:7px;background:#657187;border-radius:50%;margin-right:5px}
+.dot.online{background:var(--good);box-shadow:0 0 8px #6ed6a2}
+.side-actions{display:grid;gap:8px;margin-top:18px}.side-actions button{width:100%}
 .conversation-list{display:grid;gap:5px;margin-top:8px;max-height:34vh;overflow:auto}
 .conversation-item{width:100%;text-align:left;background:transparent;color:var(--text);border:1px solid transparent;padding:9px 10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conversation-item.active{background:var(--panel2);border-color:var(--line)}
 .topbar-title{min-width:0}.topbar-actions{display:flex;gap:6px;align-items:center}.topbar-actions button{padding:9px 10px;min-width:0}
 #mobileConversationSelect{display:none;margin-top:5px;max-width:100%;background:var(--input);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px}
-
-.main{display:grid;grid-template-rows:auto minmax(0,1fr) 18px auto;background:var(--surface);min-width:0;min-height:0;overflow:hidden}.topbar{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}.topbar h2{margin:0;font-size:16px}.messages{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-height:0;overscroll-behavior:contain}.empty{margin:auto;text-align:center;color:var(--muted);max-width:300px}.bubble-row{display:flex}.bubble-row.mine{justify-content:flex-end}.bubble{max-width:min(78%,560px);background:var(--bubble);border:1px solid var(--bubbleBorder);border-radius:15px 15px 15px 4px;padding:10px 13px;overflow-wrap:anywhere}.mine .bubble{background:var(--bubbleMine);border-color:var(--bubbleMineBorder);border-radius:15px 15px 4px 15px}.bubble .meta{font-size:10px;color:var(--muted);margin-top:5px}.composer{padding:14px 16px;border-top:1px solid var(--line);display:flex;gap:9px;min-width:0;min-height:68px;flex-shrink:0;background:var(--surface);position:relative;z-index:2}.composer input{flex:1;min-width:0;background:var(--input);border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--text)}.composer button{min-width:74px}.composer-drag-handle{display:none;align-items:center;justify-content:center;width:22px;flex:0 0 22px;color:var(--muted);cursor:grab;touch-action:none;user-select:none;font-size:18px;letter-spacing:-3px}.composer.draggable{position:fixed;z-index:20;width:min(620px,calc(100vw - 24px));min-height:68px;border:1px solid #46516a;border-radius:15px;box-shadow:0 16px 48px #0009;cursor:default}.composer.draggable .composer-drag-handle{display:flex}.composer.draggable .composer-drag-handle:active{cursor:grabbing}.typing{height:18px;padding:0 20px;color:var(--muted);font-size:11px}
-.composer-tools{display:flex;gap:6px;align-items:center;flex:0 0 auto}.composer-tool{min-width:42px!important;padding:9px 10px!important;background:var(--panel2)!important;color:var(--text)!important;border:1px solid var(--line)!important}.composer input{min-width:0}.image-preview{display:block;max-width:min(420px,100%);max-height:360px;border-radius:10px;margin-top:4px;object-fit:contain}.emoji-panel{position:absolute;left:12px;bottom:calc(100% + 8px);width:min(360px,calc(100vw - 32px));max-height:340px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 45px #0008;z-index:30;padding:10px;display:flex;flex-direction:column;gap:8px}.emoji-panel.hidden{display:none}.emoji-search{width:100%;background:var(--input);border:1px solid var(--line);border-radius:9px;padding:9px;color:var(--text)}.emoji-cats{display:flex;gap:4px;overflow-x:auto}.emoji-cats button{padding:6px 8px;min-width:34px;background:var(--panel2);color:var(--text)}.emoji-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;overflow:auto}.emoji-grid button{padding:5px 2px;background:transparent;color:var(--text);font-size:22px;line-height:1.2;border-radius:8px}.emoji-grid button:hover{background:var(--panel2)}.image-caption{font-size:12px;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}
-.modal{position:fixed;inset:0;background:#0009;display:grid;place-items:center;padding:16px;z-index:5}.modal .card{width:min(520px,100%);max-height:90vh;overflow:auto}.toggle{display:flex;align-items:center;gap:10px}.toggle input{width:18px;height:18px;accent-color:var(--accent)}.sql{white-space:pre;overflow:auto;background:#090d14;border:1px solid var(--line);padding:12px;border-radius:10px;font:11px/1.5 ui-monospace,monospace;max-height:280px}.divider{height:1px;background:var(--line);width:100%;margin:4px 0}.unread-badge{display:inline-block;float:right;min-width:19px;padding:1px 6px;border-radius:99px;background:var(--accent);color:#10131b;text-align:center;font-size:11px;font-weight:800}.foot{text-align:center;color:#718097;font-size:11px;margin-top:16px}
-@media(max-width:680px){.wrap{padding:14px 10px}.chat{height:calc(100dvh - 150px);min-height:320px;grid-template-columns:minmax(0,1fr)}.side{display:none}.main{grid-template-rows:auto minmax(0,1fr) 18px auto}.topbar{padding:13px}.topbar-actions{gap:4px}.topbar-actions button{font-size:11px;padding:8px 7px}#mobileConversationSelect{display:block;width:min(230px,55vw)}.messages{padding:14px}.bubble{max-width:88%}.composer{padding:10px;gap:8px;min-height:64px;padding-bottom:max(10px,env(safe-area-inset-bottom))}.composer input{width:0}.composer.draggable{width:calc(100vw - 20px);padding:9px;min-height:60px}.composer.draggable input{width:0}.composer button{min-width:68px;flex-shrink:0}.card{padding:18px}.auth{margin:4vh auto}}
+.main{display:grid;grid-template-rows:auto minmax(0,1fr) 18px auto;background:var(--surface);width:100%;height:100%;min-width:0;min-height:0;overflow:hidden}
+.main:has(.composer.draggable){grid-template-rows:auto minmax(0,1fr) 18px}
+.topbar{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.topbar h2{margin:0;font-size:16px}
+.messages{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;min-height:0;overscroll-behavior:contain}
+.empty{margin:auto;text-align:center;color:var(--muted);max-width:300px}
+.bubble-row{display:flex}.bubble-row.mine{justify-content:flex-end}
+.bubble{max-width:min(78%,560px);background:var(--bubble);border:1px solid var(--bubbleBorder);border-radius:15px 15px 15px 4px;padding:10px 13px;overflow-wrap:anywhere}
+.mine .bubble{background:var(--bubbleMine);border-color:var(--bubbleMineBorder);border-radius:15px 15px 4px 15px}
+.bubble .meta{font-size:10px;color:var(--muted);margin-top:5px}
+.composer{padding:14px 16px;border-top:1px solid var(--line);display:flex;gap:9px;min-width:0;min-height:68px;flex-shrink:0;background:var(--surface);position:relative;z-index:2}
+.composer input{flex:1;min-width:0;background:var(--input);border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--text)}
+.composer button{min-width:74px}
+.composer-drag-handle{display:none;align-items:center;justify-content:center;width:22px;flex:0 0 22px;color:var(--muted);cursor:grab;touch-action:none;user-select:none;font-size:18px;letter-spacing:-3px}
+.composer.draggable{position:fixed;z-index:20;width:min(620px,calc(100vw - 24px));min-height:68px;border:1px solid #46516a;border-radius:15px;box-shadow:0 16px 48px #0009;cursor:default}
+.composer.draggable .composer-drag-handle{display:flex}.composer.draggable .composer-drag-handle:active{cursor:grabbing}
+.typing{height:18px;padding:0 20px;color:var(--muted);font-size:11px}
+.composer-tools{display:flex;gap:6px;align-items:center;flex:0 0 auto}
+.composer-tool{min-width:42px!important;padding:9px 10px!important;background:var(--panel2)!important;color:var(--text)!important;border:1px solid var(--line)!important}
+.image-preview{display:block;max-width:min(420px,100%);max-height:360px;border-radius:10px;margin-top:4px;object-fit:contain}
+.emoji-panel{position:absolute;left:12px;bottom:calc(100% + 8px);width:min(360px,calc(100vw - 32px));max-height:340px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 45px #0008;z-index:30;padding:10px;display:flex;flex-direction:column;gap:8px}
+.emoji-panel.hidden{display:none}
+.emoji-search{width:100%;background:var(--input);border:1px solid var(--line);border-radius:9px;padding:9px;color:var(--text)}
+.emoji-cats{display:flex;gap:4px;overflow-x:auto}.emoji-cats button{padding:6px 8px;min-width:34px;background:var(--panel2);color:var(--text)}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;overflow:auto}
+.emoji-grid button{padding:5px 2px;background:transparent;color:var(--text);font-size:22px;line-height:1.2;border-radius:8px}
+.emoji-grid button:hover{background:var(--panel2)}
+.modal{position:fixed;inset:0;background:#0009;display:grid;place-items:center;padding:16px;z-index:5}
+.modal .card{width:min(520px,100%);max-height:90vh;overflow:auto}
+.toggle{display:flex;align-items:center;gap:10px}.toggle input{width:18px;height:18px;accent-color:var(--accent)}
+.divider{height:1px;background:var(--line);width:100%;margin:4px 0}
+.unread-badge{display:inline-block;float:right;min-width:19px;padding:1px 6px;border-radius:99px;background:var(--accent);color:#10131b;text-align:center;font-size:11px;font-weight:800}
+.foot{flex:0 0 auto;text-align:center;color:#718097;font-size:11px;margin-top:8px;padding:4px 0}
+@media(max-width:680px){
+.wrap{padding:10px;min-height:480px}.brand{margin-bottom:10px}
+.chat{grid-template-columns:minmax(0,1fr)}.side{display:none}
+.topbar{padding:13px}.topbar-actions{gap:4px}.topbar-actions button{font-size:11px;padding:8px 7px}
+#mobileConversationSelect{display:block;width:min(230px,55vw)}
+.messages{padding:14px}.bubble{max-width:88%}
+.composer{padding:10px;gap:8px;min-height:64px;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+.composer.draggable{width:calc(100vw - 20px);padding:9px;min-height:60px}
+.composer button{min-width:68px;flex-shrink:0}
+.card{padding:18px}.auth{margin:4vh auto}.foot{margin-top:6px}}
 </style>
 </head>
 <body>
@@ -53,6 +117,7 @@ button,input{font:inherit}button{cursor:pointer;border:0;border-radius:11px;padd
       <button id="authSubmit" type="submit">Sign in</button><div id="authError" class="error"></div><div id="authInfo" class="success"></div>
     </form>
     <p class="small muted">Only accounts approved in this project can join conversations.</p>
+    <p class="small"><a href="#" id="resetConfig" style="color:var(--accent)">Change Supabase project</a></p>
   </section>
 
   <section id="chat" class="card chat hidden">
@@ -106,19 +171,24 @@ button,input{font:inherit}button{cursor:pointer;border:0;border-radius:11px;padd
 (() => {
 "use strict";
 const $ = id => document.getElementById(id);
-let client=null, user=null, profile=null, channel=null, messageChannel=null, authSubscription=null, membershipChannel=null, conversationRefreshTimer=null, members=[], approvedMembers=[], conversations=[], conversationMembers=[], currentConversation=null, presenceTimer=null, typingTimer=null, typingOffTimer=null, typingLastSentAt=0, mode="login", lastMessageId=0, seenIds=new Set(), identity=null, publicKeys=new Map(), profilesById=new Map(), selectionVersion=0, unreadCounts={}, renderedObjectUrls=new Set();
+let client=null, user=null, profile=null, channel=null, messageChannel=null, authSubscription=null, membershipChannel=null, conversationRefreshTimer=null, members=[], approvedMembers=[], conversations=[], conversationMembers=[], currentConversation=null, typingTimer=null, typingOffTimer=null, typingLastSentAt=0, lastMessageId=0, seenIds=new Set(), identity=null, publicKeys=new Map(), profilesById=new Map(), selectionVersion=0, unreadCounts={}, renderedObjectUrls=new Set(), mode="login";
 const show = (id,on=true)=>$(id).classList.toggle("hidden",!on);
 const err = (id,msg)=>$(id).textContent=msg||"";
 const initials = s => (s||"?").trim().slice(0,1).toUpperCase();
+
 // Twofold E2EE v1 prototype. Uses browser Web Crypto; private CryptoKey objects stay in IndexedDB.
 // This custom protocol has not undergone an independent security audit.
 const DB_NAME="twofold-crypto-v1", DB_STORE="identities";
 function openKeyDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>req.result.createObjectStore(DB_STORE);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
 async function keyDBGet(id){const db=await openKeyDB();return new Promise((resolve,reject)=>{const r=db.transaction(DB_STORE,"readonly").objectStore(DB_STORE).get(id);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error);});}
 async function keyDBPut(id,value){const db=await openKeyDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,"readwrite");tx.objectStore(DB_STORE).put(value,id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}
-const b64u=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
+// Chunked so large buffers cannot overflow the call stack.
+const b64u=b=>{const u=new Uint8Array(b);let s="";for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");};
 const unb64u=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
+// Canonical JSON (sorted keys) used for signing so signatures do not depend on key insertion order.
+const canon=v=>Array.isArray(v)?"["+v.map(canon).join(",")+"]":(v&&typeof v==="object")?"{"+Object.keys(v).sort().map(k=>JSON.stringify(k)+":"+canon(v[k])).join(",")+"}":JSON.stringify(v);
 const enc=new TextEncoder(), dec=new TextDecoder();
+
 async function ensureIdentity(){
  if(!crypto?.subtle||!indexedDB)throw Error("This browser does not support the secure key storage required by Twofold. Use an up-to-date Chrome or Chromium browser.");
  let saved=await keyDBGet(user.id);
@@ -131,7 +201,7 @@ async function ensureIdentity(){
   saved={xPrivate:x.privateKey,xPublic:b64u(await crypto.subtle.exportKey("raw",x.publicKey)),edPrivate:ed.privateKey,edPublic:b64u(await crypto.subtle.exportKey("raw",ed.publicKey))};
   await keyDBPut(user.id,saved);
  }
- if(profile?.x25519_public && profile.x25519_public!==saved.xPublic || profile?.ed25519_public && profile.ed25519_public!==saved.edPublic){
+ if(profile?.x25519_public&&profile.x25519_public!==saved.xPublic || profile?.ed25519_public&&profile.ed25519_public!==saved.edPublic){
   throw Error("The public encryption keys on the server do not match this browser's saved identity. Twofold stopped to prevent a silent key change. Verify the account identity before continuing.");
  }
  identity=saved;
@@ -139,12 +209,14 @@ async function ensureIdentity(){
  if(error)throw Error("Could not publish your public encryption keys. Run the updated Twofold SQL first. "+error.message);
 }
 async function fingerprint(pub){const h=await crypto.subtle.digest("SHA-256",unb64u(pub));return Array.from(new Uint8Array(h).slice(0,16)).map(x=>x.toString(16).padStart(2,"0")).join("").match(/.{1,4}/g).join(" ").toUpperCase();}
-function checkPeerKeyPin(peerId,keys){
- const key="twofold_peer_key_pin_"+user.id+"_"+peerId;
+// Peer key pins live in IndexedDB next to the private keys. Old localStorage pins are migrated on first use.
+async function checkPeerKeyPin(peerId,keys){
+ const id="pin:"+user.id+":"+peerId,legacy="twofold_peer_key_pin_"+user.id+"_"+peerId;
  const current=JSON.stringify({x:keys.x25519_public,ed:keys.ed25519_public});
- const pinned=localStorage.getItem(key);
- if(pinned && pinned!==current)throw Error("SECURITY WARNING: this member’s public encryption key changed. Messages from this account are blocked until the fingerprint change is independently verified. Do not accept a new key based only on an in-app message.");
- if(!pinned)localStorage.setItem(key,current); // Trust on first use; verify the displayed fingerprint out of band.
+ let pinned=await keyDBGet(id);
+ if(!pinned){pinned=localStorage.getItem(legacy);if(pinned)await keyDBPut(id,pinned);}
+ if(pinned&&pinned!==current)throw Error("SECURITY WARNING: this member’s public encryption key changed. Messages from this account are blocked until the fingerprint change is independently verified. Do not accept a new key based only on an in-app message.");
+ if(!pinned)await keyDBPut(id,current); // Trust on first use; verify the displayed fingerprint out of band.
  return keys;
 }
 async function getPeerKeys(senderId){
@@ -199,7 +271,7 @@ async function encryptMessage(plain,targetConversation=currentConversation){
  const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:enc.encode("twofold-message-v3|"+targetConversation.id)},contentKey,enc.encode(plain));
  const recipients={};for(const id of recipientIds)recipients[id]=await wrapContentKey(id,rawContentKey,3);
  const envelope={v:3,from:user.id,conversation_id:targetConversation.id,recipient_ids:recipientIds,iv:b64u(iv),cipher:b64u(cipher),recipients};
- envelope.sig=b64u(await crypto.subtle.sign("Ed25519",identity.edPrivate,enc.encode(JSON.stringify(envelope))));
+ envelope.sig=b64u(await crypto.subtle.sign("Ed25519",identity.edPrivate,enc.encode(canon(envelope))));
  return "twf1:"+b64u(enc.encode(JSON.stringify(envelope)));
 }
 async function encryptImageFile(file,targetConversation=currentConversation){
@@ -214,12 +286,13 @@ async function encryptImageFile(file,targetConversation=currentConversation){
  const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
  const plain=new Uint8Array(await file.arrayBuffer());
  const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:enc.encode("twofold-image-v3|"+targetConversation.id)},contentKey,plain);
+ const hash=b64u(await crypto.subtle.digest("SHA-256",cipher));
  const path=crypto.randomUUID()+".enc";
  const {error:uploadError}=await client.storage.from("twofold-media").upload(path,new Blob([cipher],{type:"application/octet-stream"}),{contentType:"application/octet-stream",upsert:false});
  if(uploadError)throw Error("Encrypted image upload failed: "+uploadError.message);
  const recipients={};for(const id of recipientIds)recipients[id]=await wrapContentKey(id,rawContentKey,3);
- const envelope={v:3,type:"image",from:user.id,conversation_id:targetConversation.id,recipient_ids:recipientIds,path,mime:file.type,name:"Image",size:file.size,iv:b64u(iv),recipients};
- envelope.sig=b64u(await crypto.subtle.sign("Ed25519",identity.edPrivate,enc.encode(JSON.stringify(envelope))));
+ const envelope={v:3,type:"image",from:user.id,conversation_id:targetConversation.id,recipient_ids:recipientIds,path,mime:file.type,name:"Image",size:file.size,hash,iv:b64u(iv),recipients};
+ envelope.sig=b64u(await crypto.subtle.sign("Ed25519",identity.edPrivate,enc.encode(canon(envelope))));
  return "twf1img:"+b64u(enc.encode(JSON.stringify(envelope)));
 }
 async function verifyEnvelope(envelope,senderId,message){
@@ -232,7 +305,10 @@ async function verifyEnvelope(envelope,senderId,message){
  const signingPublic=senderId===user.id?identity.edPublic:(await getPeerKeys(senderId)).ed25519_public;
  const verifyKey=await crypto.subtle.importKey("raw",unb64u(signingPublic),{name:"Ed25519"},false,["verify"]);
  const unsigned={...envelope};delete unsigned.sig;
- const valid=await crypto.subtle.verify("Ed25519",verifyKey,unb64u(signature),enc.encode(JSON.stringify(unsigned)));
+ let valid=false;
+ for(const s of [canon(unsigned),JSON.stringify(unsigned)]){ // second form verifies messages signed before canonical signing
+  if(await crypto.subtle.verify("Ed25519",verifyKey,unb64u(signature),enc.encode(s))){valid=true;break;}
+ }
  if(!valid)throw Error("Signature verification failed");
 }
 async function decryptImageMessage(m){
@@ -249,10 +325,12 @@ async function decryptImageMessage(m){
  }
  await verifyEnvelope(envelope,m.sender_id,m);
  const {data,error}=await client.storage.from("twofold-media").download(envelope.path);if(error)throw Error("Encrypted image download failed: "+error.message);
+ const cipherBuf=await data.arrayBuffer();
+ if(envelope.hash&&b64u(await crypto.subtle.digest("SHA-256",cipherBuf))!==envelope.hash)throw Error("Stored image does not match its signed hash");
  const rawKey=await unwrapContentKey(envelope),contentKey=await crypto.subtle.importKey("raw",rawKey,{name:"AES-GCM"},false,["decrypt"]);
  if(envelope.v===3&&envelope.conversation_id!==m.conversation_id)throw Error("Image belongs to a different conversation");
  const aad=envelope.v===3?"twofold-image-v3|"+m.conversation_id:"twofold-image-v1";
- const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(envelope.iv),additionalData:enc.encode(aad)},contentKey,await data.arrayBuffer());
+ const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(envelope.iv),additionalData:enc.encode(aad)},contentKey,cipherBuf);
  return {url:URL.createObjectURL(new Blob([plain],{type:envelope.mime||"image/jpeg"})),name:envelope.name||"Image"};
 }
 async function decryptMessage(m){
@@ -277,13 +355,14 @@ async function decryptMessage(m){
   return dec.decode(plain);
  }catch(e){return "[Unable to decrypt or authenticate this message: "+(e.message||"unknown error")+"]";}
 }
+
 function config(){return {url:localStorage.getItem("twofold_url"),key:localStorage.getItem("twofold_key")};}
 function setMode(m){mode=m;$("loginTab").classList.toggle("active",m==="login");$("signupTab").classList.toggle("active",m==="signup");$("loginTab").classList.toggle("secondary",m!=="login");$("signupTab").classList.toggle("secondary",m!=="signup");show("usernameField",m==="signup");$("authSubmit").textContent=m==="login"?"Sign in":"Create account";$("password").autocomplete=m==="login"?"current-password":"new-password";err("authError","");err("authInfo","");}
 function renderConfig(){
  const c=config();if(!c.url||!c.key||!window.supabase){show("setup");show("auth",false);show("chat",false);return false;}
  if(client&&authSubscription)return true;
  client=window.supabase.createClient(c.url,c.key,{auth:{persistSession:true,autoRefreshToken:true}});
- const result=client.auth.onAuthStateChange((event,session)=>{
+ const result=client.auth.onAuthStateChange((event)=>{
   if(event==="SIGNED_OUT"){
    user=null;profile=null;identity=null;currentConversation=null;selectionVersion++;
    if(channel)client.removeChannel(channel);if(messageChannel)client.removeChannel(messageChannel);if(membershipChannel)client.removeChannel(membershipChannel);
@@ -300,6 +379,13 @@ async function start(){
  if(session){user=session.user;await enterChat();}else{show("auth");show("setup",false);show("chat",false);}
 }
 $("saveConfig").onclick=()=>{const url=$("projectUrl").value.trim().replace(/\/$/,""),key=$("anonKey").value.trim();if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)||!key){err("setupError","Enter a valid Supabase project URL and anon/publishable key.");return;}localStorage.setItem("twofold_url",url);localStorage.setItem("twofold_key",key);start();};
+$("resetConfig").addEventListener("click",async e=>{
+ e.preventDefault();
+ if(!confirm("Disconnect from this Supabase project? Your encryption keys stay in this browser."))return;
+ try{if(client)await client.auth.signOut();}catch(_){}
+ localStorage.removeItem("twofold_url");localStorage.removeItem("twofold_key");
+ location.reload();
+});
 $("loginTab").onclick=()=>setMode("login");$("signupTab").onclick=()=>setMode("signup");
 $("authForm").onsubmit=async e=>{e.preventDefault();err("authError","");err("authInfo","");$("authSubmit").disabled=true;try{
  const email=$("email").value.trim(),password=$("password").value;
@@ -389,7 +475,7 @@ async function selectConversation(c){
  $("mobileConversationSelect").value=c.id;
  $("cryptoStatus").textContent="Experimental encryption · verify member fingerprints";
  const fingerprints=[];
- for(const member of others){const p=profilesById.get(member.user_id);if(p?.ed25519_public){try{checkPeerKeyPin(member.user_id,p);fingerprints.push((p.username||"Member")+": "+await fingerprint(p.ed25519_public));}catch(e){fingerprints.push((p.username||"Member")+": KEY CHANGE DETECTED");}}}
+ for(const member of others){const p=profilesById.get(member.user_id);if(p?.ed25519_public){try{await checkPeerKeyPin(member.user_id,p);fingerprints.push((p.username||"Member")+": "+await fingerprint(p.ed25519_public));}catch(e){fingerprints.push((p.username||"Member")+": KEY CHANGE DETECTED");}}}
  $("friendFingerprint").textContent=fingerprints.length?"Member fingerprints (verify separately): "+fingerprints.join(" · "):"";
  renderConversationList();
  await loadMessages(c.id,token);
@@ -436,13 +522,9 @@ $("mobileConversationSelect").onchange=()=>{const c=conversations.find(x=>x.id==
 async function connectConversationRealtime(){
  if(membershipChannel){await client.removeChannel(membershipChannel);membershipChannel=null;}
  membershipChannel=client.channel("twofold-memberships-"+user.id);
- membershipChannel.on("postgres_changes",{
-  event:"INSERT",schema:"public",table:"conversation_members",filter:"user_id=eq."+user.id
- },()=>{
+ membershipChannel.on("postgres_changes",{event:"INSERT",schema:"public",table:"conversation_members",filter:"user_id=eq."+user.id},()=>{
   if(conversationRefreshTimer)clearTimeout(conversationRefreshTimer);
-  conversationRefreshTimer=setTimeout(()=>{
-   loadConversations().catch(e=>console.error("Twofold conversation-list refresh failed",e));
-  },200);
+  conversationRefreshTimer=setTimeout(()=>{loadConversations().catch(e=>console.error("Twofold conversation-list refresh failed",e));},200);
  });
  membershipChannel.subscribe(status=>{
   if(status==="SUBSCRIBED")console.info("Twofold conversation-list realtime connected");
@@ -458,7 +540,14 @@ async function loadMessages(conversationId=currentConversation?.id,token=selecti
  for(const m of (data||[])){if(token!==selectionVersion||currentConversation?.id!==conversationId)return;await addMessage(m,conversationId,token);}
  if(token===selectionVersion&&currentConversation?.id===conversationId)scrollBottom();
 }
-async function addMessage(m,expectedConversationId=currentConversation?.id,token=selectionVersion){
+// Messages are decrypted and appended one at a time so they always render in arrival order.
+let renderQueue=Promise.resolve();
+function addMessage(...args){
+ const p=renderQueue.then(()=>addMessageInner(...args));
+ renderQueue=p.catch(()=>{});
+ return p;
+}
+async function addMessageInner(m,expectedConversationId=currentConversation?.id,token=selectionVersion){
  if(!expectedConversationId||m.conversation_id!==expectedConversationId||currentConversation?.id!==expectedConversationId||token!==selectionVersion)return;
  if(seenIds.has(m.id))return;
  seenIds.add(m.id);
@@ -476,9 +565,13 @@ async function addMessage(m,expectedConversationId=currentConversation?.id,token
 }
 function scrollBottom(){$("messages").scrollTop=$("messages").scrollHeight;}
 async function connectRealtime(conversationId=currentConversation?.id,token=selectionVersion){
+ if(typingTimer){clearTimeout(typingTimer);typingTimer=null;}
+ if(typingOffTimer){clearTimeout(typingOffTimer);typingOffTimer=null;}
+ typingLastSentAt=0;$("typing").textContent="";
  if(channel){await client.removeChannel(channel);channel=null;}
  if(!conversationId||token!==selectionVersion||currentConversation?.id!==conversationId)return;
- const activeChannel=client.channel("twofold-presence-"+conversationId,{config:{presence:{key:user.id}}});channel=activeChannel;
+ // Private channel: requires the realtime.messages RLS policies from the SQL patch.
+ const activeChannel=client.channel("twofold-presence-"+conversationId,{config:{private:true,presence:{key:user.id}}});channel=activeChannel;
  activeChannel.on("presence",{event:"sync"},()=>{if(channel===activeChannel)updatePresence();});
  activeChannel.on("presence",{event:"join"},()=>{if(channel===activeChannel)updatePresence();});
  activeChannel.on("presence",{event:"leave"},()=>{if(channel===activeChannel)updatePresence();});
@@ -508,27 +601,26 @@ function updatePresence(){
  $("friendStatus").innerHTML=online?'<span class="dot online"></span>Members online':'<span class="dot"></span>No other members online';
  $("topStatus").textContent=online?"Conversation members online":"Connected";
 }
+
 const emojiCategories={
- Recent:"😀 😃 😄 😁 😆 😅 😂 🙂 🙃 🫠 😉 😊 😇 🥰 😍 🤩 😘 😗 ☺️ 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗 🤭 🫢 🫣 🤫 🤔 🫡 🤐 🤨 😐 😑 😶 🫥 😶‍🌫️ 😏 😒 🙄 😬 😮‍💨 🤥 😌 😔 😪 🤤 😴 😷 🤒 🤕 🤢 🤮 🤧 🥵 🥶 🥴 😵 🤯 🤠 🥳 🥸 😎 🤓 🧐 😕 🫤 😟 🙁 ☹️ 😮 😯 😲 😳 🥺 🥹 😦 😧 😨 😰 😥 😢 😭 😱 😖 😣 😞 😓 😩 😫 🥱 😤 😡 😠 🤬 😈 👿 💀 ☠️ 💩 🤡 👹 👺 👻 👽 👾 🤖 🎃",
- People:"👋 🤚 🖐️ ✋ 🖖 🫱 🫲 🫳 🫴 👌 🤌 🤏 ✌️ 🤞 🫰 🤟 🤘 🤙 👈 👉 👆 🖕 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 🫶 👐 🤲 🤝 🙏 ✍️ 💅 🤳 💪 🦾 🦿 🦵 🦶 👂 🦻 👃 🧠 🫀 🫁 🦷 🦴 👀 👁️ 👅 👄 🫦 👶 🧒 👦 👧 🧑 👨 👩 🧔 👴 👵 🙍 🙎 🙅 🙆 💁 🙋 🧏 🙇 🤦 🤷 🧑‍💻 👨‍💻 👩‍💻 🧑‍🎓 👨‍🎓 👩‍🎓 🧑‍🚀 👨‍🚀 👩‍🚀",
- Animals:"🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐻‍❄️ 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🙈 🙉 🙊 🐒 🐔 🐧 🐦 🐤 🐣 🦆 🦅 🦉 🦇 🐺 🐗 🐴 🦄 🫎 🫏 🐝 🪱 🦋 🐌 🐞 🐜 🪰 🪲 🪳 🦟 🦗 🕷️ 🦂 🐢 🐍 🦎 🦖 🦕 🐙 🦑 🦐 🦞 🦀 🪼 🐡 🐠 🐟 🐬 🐳 🐋 🦈 🐊 🐅 🐆 🦓 🦍 🦧 🦣 🐘 🦛 🦏 🐪 🐫 🦒 🦘 🦬 🐃 🐂 🐄 🐎 🐖 🐏 🐑 🦙 🐐 🦌 🐕 🦮 🐕‍🦺 🐩 🐈 🐈‍⬛ 🪽 🪿 🦃 🦚 🦜 🦢 🦩 🕊️ 🐇 🦝 🦨 🦡 🦫 🦦 🦥 🐁 🐀 🐿️ 🦔",
- Food:"🍏 🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🍆 🥑 🥦 🥬 🥒 🌶️ 🫑 🌽 🥕 🫒 🧄 🧅 🥔 🍠 🥐 🥯 🍞 🥖 🥨 🧀 🥚 🍳 🧈 🥞 🧇 🥓 🥩 🍗 🍖 🌭 🍔 🍟 🍕 🫓 🥪 🥙 🧆 🌮 🌯 🫔 🥗 🥘 🫕 🍝 🍜 🍲 🍛 🍣 🍱 🥟 🦪 🍤 🍙 🍚 🍘 🍥 🥠 🥮 🍢 🍡 🍧 🍨 🍦 🥧 🧁 🍰 🎂 🍮 🍭 🍬 🍫 🍿 🍩 🍪 🌰 🥜 🍯 🥛 🍼 ☕ 🫖 🍵 🧃 🥤 🧋 🍶 🍺 🍻 🥂 🍷 🥃 🍸 🍹 🧉 🧊",
- Nature:"🌍 🌎 🌏 🌐 🌑 🌒 🌓 🌔 🌕 🌖 🌗 🌘 🌙 🌚 🌛 🌜 🌝 🌞 ⭐ 🌟 ✨ ⚡ ☄️ 💥 🔥 🌪️ 🌈 ☀️ 🌤️ ⛅ 🌥️ ☁️ 🌦️ 🌧️ ⛈️ 🌩️ 🌨️ ❄️ ☃️ ⛄ 🌬️ 💨 💧 💦 ☔ ☂️ 🌊 🌫️ 🌱 🪴 🌲 🌳 🌴 🌵 🌾 🌿 ☘️ 🍀 🎍 🪷 🌷 🌹 🥀 🌺 🌸 🌼 🌻 🌞 🌝 🍁 🍂 🍃 🪹 🪺 🍄",
- Activities:"⚽ 🏀 🏈 ⚾ 🥎 🎾 🏐 🏉 🥏 🎱 🪀 🏓 🏸 🏒 🏑 🥍 🏏 🪃 🥅 ⛳ 🪁 🏹 🎣 🤿 🥊 🥋 🎽 🛹 🛼 🛷 ⛸️ 🥌 🎿 ⛷️ 🏂 🏋️ 🤼 🤸 ⛹️ 🤺 🤾 🏌️ 🏇 🧘 🏄 🏊 🤽 🚣 🧗 🚵 🚴 🏆 🥇 🥈 🥉 🏅 🎖️ 🏵️ 🎗️ 🎫 🎟️ 🎪 🤹 🎭 🩰 🎨 🎬 🎤 🎧 🎼 🎹 🥁 🪘 🎷 🎺 🪗 🎸 🪕 🎻 🪈 🎲 ♟️ 🎯 🎳 🎮 🕹️ 🧩",
- Travel:"🚗 🚕 🚙 🚌 🚎 🏎️ 🚓 🚑 🚒 🚐 🛻 🚚 🚛 🚜 🏍️ 🛵 🚲 🛴 🛹 🛼 🚏 🛣️ 🛤️ 🛢️ ⛽ 🚨 🚥 🚦 🛑 🚧 ⚓ 🛟 ⛵ 🚤 🛳️ ⛴️ 🚢 ✈️ 🛩️ 🛫 🛬 🪂 💺 🚁 🚟 🚠 🚡 🛰️ 🚀 🛸 🌋 🗻 🏔️ 🏕️ 🏖️ 🏜️ 🏝️ 🏞️ 🏟️ 🏛️ 🏗️ 🧱 🏘️ 🏚️ 🏠 🏡 🏢 🏣 🏤 🏥 🏦 🏨 🏩 🏪 🏫 🏬 🏭 🏯 🏰 💒 🗼 🗽 ⛪ 🕌 🛕 🕍 ⛩️ 🕋 ⛲ ⛺ 🌁 🌃 🌄 🌅 🌆 🌇 🌉 🎠 🎡 🎢",
- Objects:"⌚ 📱 📲 💻 ⌨️ 🖥️ 🖨️ 🖱️ 🖲️ 🕹️ 💽 💾 💿 📀 📷 📸 📹 🎥 📽️ 🎞️ 📞 ☎️ 📟 📠 📺 📻 🎙️ 🎚️ 🎛️ 🧭 ⏱️ ⏲️ ⏰ 🕰️ ⌛ ⏳ 📡 🔋 🪫 🔌 💡 🔦 🕯️ 🪔 🧯 🛢️ 💸 💵 💴 💶 💷 🪙 💰 💳 🧾 💎 ⚖️ 🪜 🧰 🪛 🔧 🔨 ⚒️ 🛠️ ⛏️ 🪚 🔩 ⚙️ 🪤 🧲 🪞 🪟 🛏️ 🛋️ 🪑 🚪 🪑 🚿 🛁 🪠 🧴 🧷 🧹 🧺 🧻 🪣 🧼 🫧 🪥 🧽 🧯",
- Symbols:"❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 🩷 🩵 🩶 💔 ❤️‍🔥 ❤️‍🩹 💕 💞 💓 💗 💖 💘 💝 💟 ❣️ 💌 💋 💯 💢 💥 💫 💦 💨 🕳️ 💬 👁️‍🗨️ 🗨️ 🗯️ 💭 💤 ♨️ 💣 🔔 🔕 🎵 🎶 🏧 🚮 🚰 ♿ 🚹 🚺 🚻 🚼 🚾 🛂 🛃 🛄 🛅 ⚠️ 🚸 ⛔ 🚫 🚳 🚭 🚯 🚱 🚷 📵 🔞 ☢️ ☣️ ⬆️ ↗️ ➡️ ↘️ ⬇️ ↙️ ⬅️ ↖️ ↕️ ↔️ 🔃 🔄 🔙 🔚 🔛 🔜 🔝 🛐 ⚛️ 🕉️ ✡️ ☸️ ☯️ ✝️ ☦️ ☪️ ☮️ 🕎 🔯 ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓",
- Flags:"🏁 🚩 🎌 🏴 🏳️ 🏳️‍🌈 🏳️‍⚧️ 🏴‍☠️ 🇺🇸 🇨🇦 🇲🇽 🇧🇷 🇬🇧 🇮🇪 🇫🇷 🇩🇪 🇮🇹 🇪🇸 🇵🇹 🇳🇱 🇧🇪 🇨🇭 🇦🇹 🇵🇱 🇺🇦 🇷🇺 🇸🇪 🇳🇴 🇩🇰 🇫🇮 🇮🇸 🇬🇷 🇹🇷 🇮🇱 🇸🇦 🇦🇪 🇮🇳 🇵🇰 🇧🇩 🇨🇳 🇯🇵 🇰🇷 🇹🇭 🇻🇳 🇵🇭 🇮🇩 🇦🇺 🇳🇿 🇿🇦 🇪🇬 🇳🇬 🇰🇪 🇦🇷 🇨🇱 🇨🇴 🇵🇪 🇺🇾 🇯🇲 🇨🇺 🇩🇴 🇵🇷"
+ Recent:"😀 😃 😄 😁 😆 😅 😂 🙂 😉 😊 😇 🥰 😍 🤩 😘 😋 😜 🤪 🤗 🤭 🤫 🤔 😐 😏 🙄 😬 😌 😔 😴 🤒 🤯 🥳 😎 🤓 😕 😮 😳 🥺 😢 😭 😱 😤 😡 🤬 😈 💀 💩 🤡 👻 👽 🤖",
+ People:"👋 ✋ 👌 🤌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 👍 👎 ✊ 👊 👏 🙌 🫶 🤝 🙏 💪 👀 🧠 👶 🧑 👨 👩 🧔 👴 👵 🙅 🙆 💁 🙋 🤦 🤷",
+ Animals:"🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🦆 🦅 🦉 🦇 🐺 🐴 🦄 🐝 🦋 🐌 🐢 🐍 🐙 🦀 🐠 🐬 🐳 🦈 🐘 🦒 🐕 🐈",
+ Food:"🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🍒 🍑 🥭 🍍 🥝 🍅 🥑 🥦 🌽 🥕 🥐 🍞 🧀 🍳 🥞 🥓 🍗 🌭 🍔 🍟 🍕 🌮 🍝 🍜 🍣 🍦 🍩 🍪 🎂 🍫 🍿 ☕ 🍵 🍺 🍷 🧊",
+ Nature:"🌍 🌙 ⭐ 🌟 ✨ ⚡ 🔥 🌈 ☀️ ⛅ ☁️ 🌧️ ❄️ ⛄ 💨 💧 🌊 🌱 🌲 🌳 🌴 🌵 🍀 🌷 🌹 🌺 🌸 🌼 🌻 🍁 🍂 🍄",
+ Activities:"⚽ 🏀 🏈 ⚾ 🎾 🏐 🎱 🏓 🏸 🥊 🎿 🏂 🏋️ 🧘 🏄 🏊 🚴 🏆 🥇 🥈 🥉 🎪 🎭 🎨 🎬 🎤 🎧 🎹 🥁 🎷 🎸 🎻 🎲 🎯 🎳 🎮 🧩",
+ Travel:"🚗 🚕 🚌 🏎️ 🚓 🚑 🚒 🚚 🏍️ 🚲 ⛵ 🚤 🚢 ✈️ 🚁 🚀 🛸 🌋 🏔️ 🏕️ 🏖️ 🏝️ 🏠 🏢 🏥 🏫 🏰 🗼 🗽 ⛪ ⛺ 🌃 🌅 🌆 🎡 🎢",
+ Objects:"⌚ 📱 💻 ⌨️ 🖥️ 📷 📹 🎥 📞 📺 📻 ⏰ ⌛ 🔋 🔌 💡 🔦 💸 💵 💰 💳 💎 🔧 🔨 ⚙️ 🧲 🔑 🔒 🔓 📦 ✉️ 📌 📎 ✏️ 📚 🎁",
+ Symbols:"❤️ 🧡 💛 💚 💙 💜 🖤 🤍 💔 💕 💞 💓 💗 💖 💘 💝 💯 💢 💥 💫 💦 💬 💭 💤 🔔 🎵 🎶 ⚠️ ⛔ 🚫 ✅ ❌ ❓ ❗ ➕ ➖ ➡️ ⬅️ ⬆️ ⬇️ 🔄",
+ Flags:"🏁 🚩 🎌 🏴 🏳️ 🏳️‍🌈 🏴‍☠️ 🇺🇸 🇨🇦 🇲🇽 🇧🇷 🇬🇧 🇮🇪 🇫🇷 🇩🇪 🇮🇹 🇪🇸 🇵🇹 🇳🇱 🇸🇪 🇳🇴 🇺🇦 🇮🇳 🇨🇳 🇯🇵 🇰🇷 🇦🇺 🇿🇦 🇦🇷 🇵🇷"
 };
 let activeEmojiCategory="Recent";
+const emojiNames={"😀":"grinning face smile","😂":"face tears joy laugh","🥰":"smiling face hearts love","😍":"heart eyes love","😭":"crying sad tears","😡":"angry mad","🤔":"thinking","😎":"sunglasses cool","🤖":"robot","💀":"skull","👻":"ghost","👍":"thumbs up","👎":"thumbs down","🙏":"pray please thanks","❤️":"red heart love","💔":"broken heart","🔥":"fire hot","⭐":"star","✨":"sparkles","🎂":"birthday cake","🍕":"pizza","🍔":"hamburger burger","🍟":"fries","🍎":"apple","🐱":"cat","🐶":"dog","🐸":"frog","🦊":"fox","🐼":"panda","🐧":"penguin","🦄":"unicorn","🚀":"rocket space","🚗":"car","✈️":"airplane plane","⚽":"soccer ball","🏀":"basketball","🎮":"video game controller","💻":"laptop computer","📱":"phone mobile","📷":"camera","🌈":"rainbow","☀️":"sun sunny","🌙":"moon","🌹":"rose flower","🌻":"sunflower","🍀":"clover luck","💯":"hundred perfect","💡":"light bulb idea","🎵":"music note","🇺🇸":"United States flag"};
 function renderEmojiPicker(){
  const cats=$("emojiCats"),grid=$("emojiGrid"),q=$("emojiSearch").value.trim().toLowerCase();cats.innerHTML="";
  Object.keys(emojiCategories).forEach(name=>{const btn=document.createElement("button");btn.type="button";btn.textContent=({Recent:"🕘",People:"🙂",Animals:"🐾",Food:"🍕",Nature:"🌿",Activities:"⚽",Travel:"🚀",Objects:"💡",Symbols:"❤️",Flags:"🏳️"})[name];btn.title=name;btn.className="secondary";btn.onclick=()=>{activeEmojiCategory=name;$("emojiSearch").value="";renderEmojiPicker();};cats.append(btn);});
- let list=activeEmojiCategory==="Recent"?emojiCategories.Recent:emojiCategories[activeEmojiCategory]||"";
- if(q){const names={"😀":"grinning face smile","😂":"face tears joy laugh","🥰":"smiling face hearts love","😍":"heart eyes love","😭":"crying sad tears","😡":"angry mad","🤔":"thinking","😎":"sunglasses cool","🤖":"robot","💀":"skull","👻":"ghost","👍":"thumbs up","👎":"thumbs down","🙏":"pray please thanks","❤️":"red heart love","💔":"broken heart","🔥":"fire hot","⭐":"star","✨":"sparkles","🎉":"party celebration","🎂":"birthday cake","🍕":"pizza","🍔":"hamburger burger","🍟":"fries","🍎":"apple","🐱":"cat","🐶":"dog","🐸":"frog","🦊":"fox","🐼":"panda","🐧":"penguin","🦄":"unicorn","🚀":"rocket space","🚗":"car","✈️":"airplane plane","⚽":"soccer ball","🏀":"basketball","🎮":"video game controller","💻":"laptop computer","📱":"phone mobile","📷":"camera","🌈":"rainbow","☀️":"sun sunny","🌙":"moon","🌹":"rose flower","🌻":"sunflower","🍀":"clover luck","💯":"hundred perfect","💡":"light bulb idea","🎵":"music note","🇺🇸":"United States flag"};
-  const all=[...new Set(Object.values(emojiCategories).join(" ").split(/\s+/).filter(Boolean))];
-  list=all.filter(e=>(names[e]||"").includes(q)||e===q).join(" ");
- }
+ let list=emojiCategories[activeEmojiCategory]||"";
+ if(q){const all=[...new Set(Object.values(emojiCategories).join(" ").split(/\s+/).filter(Boolean))];list=all.filter(e=>(emojiNames[e]||"").includes(q)||e===q).join(" ");}
  grid.innerHTML="";for(const emoji of [...new Set(list.split(/\s+/).filter(Boolean))]){const b=document.createElement("button");b.type="button";b.textContent=emoji;b.title=emoji;b.onclick=()=>{const input=$("messageInput"),a=input.selectionStart??input.value.length,z=input.selectionEnd??a;input.value=input.value.slice(0,a)+emoji+input.value.slice(z);input.focus();input.setSelectionRange(a+emoji.length,a+emoji.length);};grid.append(b);}
 }
 $("emojiBtn").onclick=()=>{show("emojiPanel",$("emojiPanel").classList.contains("hidden"));if(!$("emojiPanel").classList.contains("hidden")){activeEmojiCategory="Recent";renderEmojiPicker();$("emojiSearch").focus();}};
@@ -546,8 +638,9 @@ $("messageInput").addEventListener("input",()=>{
  if(typingTimer)clearTimeout(typingTimer);
  const active=channel;typingTimer=setTimeout(()=>{if(channel===active)active.send({type:"broadcast",event:"typing",payload:{user_id:user.id,typing:false}});typingLastSentAt=0;},1500);
 });
+
 const composer=$("composer"), dragHandle=$("composerDragHandle");
-function applyChatbarMode(){const draggable=localStorage.getItem("twofold_chatbar_mode")==="draggable";composer.classList.toggle("draggable",draggable);$("chatbarMode").value=draggable?"draggable":"normal";if(draggable){const saved=JSON.parse(localStorage.getItem("twofold_chatbar_position")||"null");if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){composer.style.left=Math.max(8,Math.min(innerWidth-composer.offsetWidth-8,saved.x))+"px";composer.style.top=Math.max(8,Math.min(innerHeight-composer.offsetHeight-8,saved.y))+"px";}else{composer.style.left=Math.max(8,(innerWidth-composer.offsetWidth)/2)+"px";composer.style.top=Math.max(8,innerHeight-composer.offsetHeight-24)+"px";}}else{composer.style.left="";composer.style.top="";}}
+function applyChatbarMode(){const draggable=localStorage.getItem("twofold_chatbar_mode")==="draggable";composer.classList.toggle("draggable",draggable);$("chatbarMode").value=draggable?"draggable":"normal";if(draggable){let saved=null;try{saved=JSON.parse(localStorage.getItem("twofold_chatbar_position")||"null");}catch(e){}if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){composer.style.left=Math.max(8,Math.min(innerWidth-composer.offsetWidth-8,saved.x))+"px";composer.style.top=Math.max(8,Math.min(innerHeight-composer.offsetHeight-8,saved.y))+"px";}else{composer.style.left=Math.max(8,(innerWidth-composer.offsetWidth)/2)+"px";composer.style.top=Math.max(8,innerHeight-composer.offsetHeight-24)+"px";}}else{composer.style.left="";composer.style.top="";}}
 $("chatbarMode").onchange=()=>{localStorage.setItem("twofold_chatbar_mode",$("chatbarMode").value);applyChatbarMode();};
 let dragState=null;
 dragHandle.addEventListener("pointerdown",e=>{if(!composer.classList.contains("draggable"))return;e.preventDefault();const r=composer.getBoundingClientRect();dragState={dx:e.clientX-r.left,dy:e.clientY-r.top};dragHandle.setPointerCapture(e.pointerId);});
@@ -556,6 +649,7 @@ function stopDragging(){if(!dragState)return;dragState=null;const r=composer.get
 dragHandle.addEventListener("pointerup",stopDragging);dragHandle.addEventListener("pointercancel",stopDragging);
 window.addEventListener("resize",()=>{if(composer.classList.contains("draggable"))applyChatbarMode();});
 applyChatbarMode();
+
 function applyTheme(theme){const allowed=["midnight","ocean","emerald","rose","sunset","light"];const value=allowed.includes(theme)?theme:"midnight";document.body.dataset.theme=value;localStorage.setItem("twofold_theme",value);const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=value==="light"?"#eef2f8":({midnight:"#0c0f16",ocean:"#071724",emerald:"#091811",rose:"#1b1018",sunset:"#21130f"})[value];}
 $("themeSelect").onchange=()=>applyTheme($("themeSelect").value);
 applyTheme(localStorage.getItem("twofold_theme")||"midnight");
