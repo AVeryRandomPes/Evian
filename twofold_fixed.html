@@ -256,15 +256,6 @@ async function getPeerKeys(senderId){
  }
  return checkPeerKeyPin(senderId,keys);
 }
-async function deriveMessageKey(peerXPublic,salt){
- const peer=await crypto.subtle.importKey("raw",unb64u(peerXPublic),{name:"X25519"},false,[]);
- const shared=await crypto.subtle.deriveBits({name:"X25519",public:peer},identity.xPrivate,256);
- const ikm=await crypto.subtle.importKey("raw",shared,"HKDF",false,["deriveBits"]);
- // Legacy derivation retained so existing v1/v2 messages remain decryptable.
- const schedule=await crypto.subtle.deriveBits({name:"HKDF",hash:"SHA-256",salt,info:enc.encode("Twofold-v1|2^2048-key-schedule")},ikm,2048);
- const scheduleKey=await crypto.subtle.importKey("raw",schedule,"HKDF",false,["deriveKey"]);
- return crypto.subtle.deriveKey({name:"HKDF",hash:"SHA-256",salt,info:enc.encode("Twofold-v1|AES-256-GCM|message-key")},scheduleKey,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
-}
 async function deriveMessageKeyV3(peerXPublic,salt){
  const peer=await crypto.subtle.importKey("raw",unb64u(peerXPublic),{name:"X25519"},false,[]);
  const shared=await crypto.subtle.deriveBits({name:"X25519",public:peer},identity.xPrivate,256);
@@ -280,16 +271,17 @@ async function publicXFor(id){
  if(id===user.id)return identity.xPublic;
  return (await getPeerKeys(id)).x25519_public;
 }
-async function wrapContentKey(id,rawContentKey,version=2){
+async function wrapContentKey(id,rawContentKey){
  const peerPublic=await publicXFor(id),salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
- const wrappingKey=version===3?await deriveMessageKeyV3(peerPublic,salt):await deriveMessageKey(peerPublic,salt);
+ const wrappingKey=await deriveMessageKeyV3(peerPublic,salt);
  const wrapped=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:enc.encode("twofold-wrap-v2")},wrappingKey,rawContentKey);
  return {salt:b64u(salt),iv:b64u(iv),wrapped:b64u(wrapped)};
 }
 async function unwrapContentKey(envelope){
+ if(envelope?.v!==3)throw Error("This message uses an unsupported encryption version. Twofold now supports v3 only.");
  const recipient=envelope.recipients?.[user.id];if(!recipient)throw Error("This content was not encrypted for this account.");
  const senderPublic=envelope.from===user.id?identity.xPublic:(await getPeerKeys(envelope.from)).x25519_public;
- const wrappingKey=envelope.v===3?await deriveMessageKeyV3(senderPublic,unb64u(recipient.salt)):await deriveMessageKey(senderPublic,unb64u(recipient.salt));
+ const wrappingKey=await deriveMessageKeyV3(senderPublic,unb64u(recipient.salt));
  return crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(recipient.iv),additionalData:enc.encode("twofold-wrap-v2")},wrappingKey,unb64u(recipient.wrapped));
 }
 async function encryptMessage(plain,targetConversation=currentConversation){
@@ -297,11 +289,11 @@ async function encryptMessage(plain,targetConversation=currentConversation){
  const recipientIds=currentRecipients(targetConversation.members||[]).sort();
  if(recipientIds.length>32)throw Error("This experimental group-encryption format supports at most 32 members. Larger rooms need a different group-encryption protocol.");
  const missing=[];for(const id of recipientIds){if(id!==user.id){try{await getPeerKeys(id);}catch(e){const name=profilesById.get(id)?.username||"a member";missing.push(name+": "+(e?.message||String(e)));}}}
- if(missing.length)throw Error("Message not sent. Encryption key checks failed:\n"+missing.join("\n"));
+ if(missing.length)throw Error("Message not sent. Encryption key checks failed:\\n"+missing.join("\\n"));
  const rawContentKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
  const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
  const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:enc.encode("twofold-message-v3|"+targetConversation.id)},contentKey,enc.encode(plain));
- const recipients={};for(const id of recipientIds)recipients[id]=await wrapContentKey(id,rawContentKey,3);
+ const recipients={};for(const id of recipientIds)recipients[id]=await wrapContentKey(id,rawContentKey);
  const envelope={v:3,from:user.id,conversation_id:targetConversation.id,recipient_ids:recipientIds,iv:b64u(iv),cipher:b64u(cipher),recipients};
  envelope.sig=b64u(await crypto.subtle.sign("Ed25519",identity.edPrivate,enc.encode(canon(envelope))));
  return "twf1:"+b64u(enc.encode(JSON.stringify(envelope)));
@@ -312,8 +304,8 @@ async function encryptImageFile(file,targetConversation=currentConversation){
  if(file.size>5*1024*1024)throw Error("Images must be 5 MB or smaller.");
  const recipientIds=currentRecipients(targetConversation.members||[]).sort();
  if(recipientIds.length>32)throw Error("This experimental group-encryption format supports at most 32 members.");
- const missing=[];for(const id of recipientIds){if(id!==user.id){try{await getPeerKeys(id);}catch(e){missing.push(profilesById.get(id)?.username||"a member");}}}
- if(missing.length)throw Error("Image not sent. Encryption key checks failed:\n"+missing.join("\n"));
+ const missing=[];for(const id of recipientIds){if(id!==user.id){try{await getPeerKeys(id);}catch(e){missing.push((profilesById.get(id)?.username||"a member")+": "+(e?.message||String(e)));}}}
+ if(missing.length)throw Error("Image not sent. Encryption key checks failed:\\n"+missing.join("\\n"));
  const rawContentKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
  const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
  const plain=new Uint8Array(await file.arrayBuffer());
@@ -322,68 +314,44 @@ async function encryptImageFile(file,targetConversation=currentConversation){
  const path=crypto.randomUUID()+".enc";
  const {error:uploadError}=await client.storage.from("twofold-media").upload(path,new Blob([cipher],{type:"application/octet-stream"}),{contentType:"application/octet-stream",upsert:false});
  if(uploadError)throw Error("Encrypted image upload failed: "+uploadError.message);
- const recipients={};for(const id of recipientIds)recipients[id]=await wrapContentKey(id,rawContentKey,3);
+ const recipients={};for(const id of recipientIds)recipients[id]=await wrapContentKey(id,rawContentKey);
  const envelope={v:3,type:"image",from:user.id,conversation_id:targetConversation.id,recipient_ids:recipientIds,path,mime:file.type,name:"Image",size:file.size,hash,iv:b64u(iv),recipients};
  envelope.sig=b64u(await crypto.subtle.sign("Ed25519",identity.edPrivate,enc.encode(canon(envelope))));
  return "twf1img:"+b64u(enc.encode(JSON.stringify(envelope)));
 }
 async function verifyEnvelope(envelope,senderId,message){
+ if(envelope?.v!==3)throw Error("This message uses an unsupported encryption version. Twofold now supports v3 only.");
+ if(envelope.from!==senderId)throw Error("Invalid sender metadata");
+ if(envelope.conversation_id!==message.conversation_id||!Array.isArray(envelope.recipient_ids)||!envelope.recipient_ids.includes(user.id))throw Error("Message conversation or recipient binding is invalid");
+ const declared=[...envelope.recipient_ids].sort(),actual=Object.keys(envelope.recipients||{}).sort();
+ if(JSON.stringify(declared)!==JSON.stringify(actual))throw Error("Message recipient list does not match its key envelopes");
  const signature=envelope.sig;if(!signature)throw Error("Message signature is missing");
- if(envelope.v===3){
-  if(envelope.conversation_id!==message.conversation_id||!Array.isArray(envelope.recipient_ids)||!envelope.recipient_ids.includes(user.id))throw Error("Message conversation or recipient binding is invalid");
-  const declared=[...envelope.recipient_ids].sort(),actual=Object.keys(envelope.recipients||{}).sort();
-  if(JSON.stringify(declared)!==JSON.stringify(actual))throw Error("Message recipient list does not match its key envelopes");
- }
  const signingPublic=senderId===user.id?identity.edPublic:(await getPeerKeys(senderId)).ed25519_public;
  const verifyKey=await crypto.subtle.importKey("raw",unb64u(signingPublic),{name:"Ed25519"},false,["verify"]);
  const unsigned={...envelope};delete unsigned.sig;
- let valid=false;
- for(const s of [canon(unsigned),JSON.stringify(unsigned)]){ // second form verifies messages signed before canonical signing
-  if(await crypto.subtle.verify("Ed25519",verifyKey,unb64u(signature),enc.encode(s))){valid=true;break;}
- }
+ const valid=await crypto.subtle.verify("Ed25519",verifyKey,unb64u(signature),enc.encode(canon(unsigned)));
  if(!valid)throw Error("Signature verification failed");
 }
 async function decryptImageMessage(m){
  const envelope=JSON.parse(dec.decode(unb64u(m.body.slice(8))));
+ if(envelope?.v!==3)throw Error("This image uses an unsupported encryption version. Twofold now supports v3 only.");
  if(envelope.from!==m.sender_id||envelope.type!=="image")throw Error("Invalid image metadata");
- if(envelope.v===1){
-  const peer=members.find(member=>member.user_id!==user.id);if(!peer)throw Error("Sender key is unavailable");
-  const peerKeys=await getPeerKeys(m.sender_id===user.id?peer.user_id:m.sender_id);
-  await verifyEnvelope(envelope,m.sender_id,m);
-  const {data,error}=await client.storage.from("twofold-media").download(envelope.path);if(error)throw Error("Encrypted image download failed: "+error.message);
-  const key=await deriveMessageKey(peerKeys.x25519_public,unb64u(envelope.salt));
-  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(envelope.iv),additionalData:enc.encode("twofold-image-v1")},key,await data.arrayBuffer());
-  return {url:URL.createObjectURL(new Blob([plain],{type:envelope.mime||"image/jpeg"})),name:envelope.name||"Image"};
- }
  await verifyEnvelope(envelope,m.sender_id,m);
  const {data,error}=await client.storage.from("twofold-media").download(envelope.path);if(error)throw Error("Encrypted image download failed: "+error.message);
  const cipherBuf=await data.arrayBuffer();
- if(envelope.hash&&b64u(await crypto.subtle.digest("SHA-256",cipherBuf))!==envelope.hash)throw Error("Stored image does not match its signed hash");
+ if(b64u(await crypto.subtle.digest("SHA-256",cipherBuf))!==envelope.hash)throw Error("Stored image does not match its signed hash");
  const rawKey=await unwrapContentKey(envelope),contentKey=await crypto.subtle.importKey("raw",rawKey,{name:"AES-GCM"},false,["decrypt"]);
- if(envelope.v===3&&envelope.conversation_id!==m.conversation_id)throw Error("Image belongs to a different conversation");
- const aad=envelope.v===3?"twofold-image-v3|"+m.conversation_id:"twofold-image-v1";
- const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(envelope.iv),additionalData:enc.encode(aad)},contentKey,cipherBuf);
+ const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(envelope.iv),additionalData:enc.encode("twofold-image-v3|"+m.conversation_id)},contentKey,cipherBuf);
  return {url:URL.createObjectURL(new Blob([plain],{type:envelope.mime||"image/jpeg"})),name:envelope.name||"Image"};
 }
 async function decryptMessage(m){
- if(!String(m.body).startsWith("twf1:"))return "[Older message: stored before end-to-end encryption was enabled]";
+ if(!String(m.body).startsWith("twf1:"))return "[Unsupported message: this Twofold version supports v3 encryption only]";
  try{
   const envelope=JSON.parse(dec.decode(unb64u(m.body.slice(5))));
-  if(envelope.from!==m.sender_id)throw Error("Invalid sender metadata");
-  if(envelope.v===1){
-   const peer=members.find(member=>member.user_id!==user.id);if(!peer)throw Error("Legacy message peer is unavailable");
-   const keyOwnerId=m.sender_id===user.id?peer.user_id:m.sender_id;
-   const peerKeys=await getPeerKeys(keyOwnerId);
-   await verifyEnvelope(envelope,m.sender_id,m);
-   const key=await deriveMessageKey(peerKeys.x25519_public,unb64u(envelope.salt));
-   const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(envelope.iv),additionalData:enc.encode("twofold-message-v1")},key,unb64u(envelope.cipher));
-   return dec.decode(plain);
-  }
+  if(envelope?.v!==3)throw Error("This message uses an unsupported encryption version. Twofold now supports v3 only.");
   await verifyEnvelope(envelope,m.sender_id,m);
   const rawKey=await unwrapContentKey(envelope),contentKey=await crypto.subtle.importKey("raw",rawKey,{name:"AES-GCM"},false,["decrypt"]);
-  if(envelope.v===3&&envelope.conversation_id!==m.conversation_id)throw Error("Message belongs to a different conversation");
-  const aad=envelope.v===3?"twofold-message-v3|"+m.conversation_id:"twofold-message-v1";
-  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(envelope.iv),additionalData:enc.encode(aad)},contentKey,unb64u(envelope.cipher));
+  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64u(envelope.iv),additionalData:enc.encode("twofold-message-v3|"+m.conversation_id)},contentKey,unb64u(envelope.cipher));
   return dec.decode(plain);
  }catch(e){return "[Unable to decrypt or authenticate this message: "+(e.message||"unknown error")+"]";}
 }
