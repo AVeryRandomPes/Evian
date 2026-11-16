@@ -155,6 +155,14 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <div class="field"><label for="editUsername">Your username</label><input id="editUsername" maxlength="24"></div>
     <button id="saveUsername">Save username</button>
     <div class="divider"></div>
+    <div class="field"><label>Friends</label>
+      <div class="row" style="gap:7px"><input id="friendUsername" maxlength="24" placeholder="Username to add"><button type="button" id="sendFriendRequest" style="flex:0 0 auto">Add</button></div>
+      <div id="friendRequestStatus" class="small muted"></div>
+      <div class="small muted" style="margin:10px 0 6px">YOUR FRIENDS</div><div id="friendsList" class="blocked-list"><div class="small muted">Loading friends…</div></div>
+      <div class="small muted" style="margin:12px 0 6px">INCOMING REQUESTS</div><div id="incomingFriendRequests" class="blocked-list"><div class="small muted">Loading requests…</div></div>
+      <div class="small muted" style="margin:12px 0 6px">SENT REQUESTS</div><div id="outgoingFriendRequests" class="blocked-list"><div class="small muted">Loading requests…</div></div>
+    </div>
+    <div class="divider"></div>
     <div class="field"><label>Blocked users</label><div id="blockedUsersList" class="blocked-list"><div class="small muted">Loading blocked users…</div></div><p class="small muted">Blocked users cannot start direct conversations with you. Their messages are hidden from you, including in shared groups.</p></div>
     <div class="divider"></div>
     <div class="field"><label for="themeSelect">Appearance theme</label><select id="themeSelect" style="width:100%;background:var(--input);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:12px"><option value="midnight">Midnight</option><option value="ocean">Ocean</option><option value="emerald">Emerald</option><option value="rose">Rose</option><option value="sunset">Sunset</option><option value="light">Light</option></select><p class="small muted">Themes are saved on this device.</p></div>
@@ -430,6 +438,7 @@ async function enterChat(){
  if(!members.some(m=>m.user_id===user.id)){show("chat",false);show("auth");err("authError","Your account has not been added to this Twofold project yet. Ask the project owner to approve the email address on this account.");return;}
  await ensureIdentity();
  await refreshBlockedUsers();
+ await refreshFriends();
  profilesById.set(user.id,{id:user.id,username:profile.username,x25519_public:identity.xPublic,ed25519_public:identity.edPublic});
  publicKeys.set(user.id,{x25519_public:identity.xPublic,ed25519_public:identity.edPublic});
  await loadConversations();
@@ -498,6 +507,7 @@ function addMenuButton(menu,label,action,kind=""){
  menu.append(b);return b;
 }
 async function isContact(targetId){
+ if(!targetId||targetId===user.id)return false;
  const {data,error}=await client.from("friend_requests").select("sender_id,receiver_id").eq("status","accepted").or("and(sender_id.eq."+user.id+",receiver_id.eq."+targetId+"),and(sender_id.eq."+targetId+",receiver_id.eq."+user.id+")").limit(1);
  if(error)throw error;return !!data?.length;
 }
@@ -531,6 +541,7 @@ async function openConversationMenu(c,x,y,memberId=null){
    if(!memberId)separator();
    addMenuButton(menu,blockedUserIds.has(targetId)?"Unblock User":"Block User",async()=>{if(blockedUserIds.has(targetId)){const {error}=await client.rpc("twofold_unblock_user",{blocked_user:targetId});if(error)throw error;blockedUserIds.delete(targetId);}else{const {error}=await client.rpc("twofold_block_user",{blocked_user:targetId});if(error)throw error;blockedUserIds.add(targetId);}await refreshBlockedUsers();const activeId=currentConversation?.id;await loadConversations();const active=conversations.find(x=>x.id===activeId);if(active)await selectConversation(active);},blockedUserIds.has(targetId)?"":"danger");
    addMenuButton(menu,contact?"Remove User":"Add User",async()=>{
+    if(!targetId||targetId===user.id)throw Error("You cannot add your own account as a friend.");
     if(contact){const {error}=await client.rpc("twofold_remove_friend",{friend_user:targetId});if(error)throw error;}
     else{if(!p?.username)throw Error("This member's username is unavailable.");const {error}=await client.rpc("twofold_send_friend_request",{target_username:p.username});if(error)throw error;}
     alert(contact?"Contact removed.":"Contact request sent or accepted.");
@@ -557,6 +568,55 @@ async function refreshAdminTargets(){
  for(const p of (data||[]).filter(p=>p.id!==user.id).sort((a,b)=>a.username.localeCompare(b.username))){const option=document.createElement("option");option.value=p.id;option.textContent=p.username||p.id;select.append(option);}
  if(!select.options.length){const option=document.createElement("option");option.value="";option.textContent="No other approved accounts";select.append(option);}
 }
+async function refreshFriends(){
+ const {data:requests,error}=await client.from("friend_requests").select("id,sender_id,receiver_id,status,created_at").or("sender_id.eq."+user.id+",receiver_id.eq."+user.id).order("created_at",{ascending:false});
+ if(error)throw error;
+ const rows=(requests||[]).filter(r=>r.sender_id!==r.receiver_id);
+ const ids=[...new Set(rows.map(r=>r.sender_id===user.id?r.receiver_id:r.sender_id).filter(id=>id&&id!==user.id))];
+ let people=[];
+ if(ids.length){
+  const {data,error:profileError}=await client.from("profiles").select("id,username").in("id",ids);
+  if(profileError)throw profileError;
+  people=profileError?[]:(data||[]);
+ }
+ const nameFor=id=>people.find(p=>p.id===id)?.username||"Unknown user";
+ const makeRow=(id,label,actions=[])=>{
+  const row=document.createElement("div");row.className="blocked-user-row";
+  const name=document.createElement("strong");name.textContent=nameFor(id);row.append(name);
+  const controls=document.createElement("div");controls.className="row";controls.style.gap="5px";
+  for(const [caption,fn,kind] of actions){const b=document.createElement("button");b.type="button";b.className=kind||"secondary";b.textContent=caption;b.onclick=async()=>{b.disabled=true;try{await fn();await refreshFriends();}catch(e){b.disabled=false;alert(e.message||String(e));}};controls.append(b);}
+  if(actions.length)row.append(controls);
+  return row;
+ };
+ const friends=$("friendsList"),incoming=$("incomingFriendRequests"),outgoing=$("outgoingFriendRequests");
+ friends.innerHTML="";incoming.innerHTML="";outgoing.innerHTML="";
+ const accepted=rows.filter(r=>r.status==="accepted").map(r=>r.sender_id===user.id?r.receiver_id:r.sender_id);
+ const uniqueFriends=[...new Set(accepted)].filter(id=>id!==user.id);
+ if(!uniqueFriends.length){const e=document.createElement("div");e.className="small muted";e.textContent="You haven't added any friends yet.";friends.append(e);}
+ for(const id of uniqueFriends)friends.append(makeRow(id,"Friend",[
+  ["Message",()=>createDirectMessage(id)],
+  ["Remove",async()=>{const {error}=await client.rpc("twofold_remove_friend",{friend_user:id});if(error)throw error;},"danger"]
+ ]));
+ const incomingRows=rows.filter(r=>r.status==="pending"&&r.receiver_id===user.id);
+ if(!incomingRows.length){const e=document.createElement("div");e.className="small muted";e.textContent="No incoming requests.";incoming.append(e);}
+ for(const r of incomingRows)incoming.append(makeRow(r.sender_id,"Request",[
+  ["Accept",async()=>{const {error}=await client.rpc("twofold_respond_friend_request",{request_id:r.id,accept:true});if(error)throw error;}],
+  ["Decline",async()=>{const {error}=await client.rpc("twofold_respond_friend_request",{request_id:r.id,accept:false});if(error)throw error;},"danger"]
+ ]));
+ const outgoingRows=rows.filter(r=>r.status==="pending"&&r.sender_id===user.id);
+ if(!outgoingRows.length){const e=document.createElement("div");e.className="small muted";e.textContent="No sent requests.";outgoing.append(e);}
+ for(const r of outgoingRows)outgoing.append(makeRow(r.receiver_id,"Sent request"));
+}
+$("sendFriendRequest").onclick=async()=>{
+ const input=$("friendUsername"),status=$("friendRequestStatus"),username=input.value.trim();
+ status.textContent="";
+ if(!username){status.textContent="Enter a username.";return;}
+ if(username.toLowerCase()===String(profile?.username||"").trim().toLowerCase()){status.textContent="You can't add your own account as a friend.";return;}
+ const button=$("sendFriendRequest");button.disabled=true;
+ try{const {error}=await client.rpc("twofold_send_friend_request",{target_username:username});if(error)throw error;input.value="";status.textContent="Friend request sent, or accepted an existing request.";await refreshFriends();}
+ catch(e){status.textContent=e.message||String(e);}
+ finally{button.disabled=false;}
+};
 async function refreshBlockedUsers(){
  const {data,error}=await client.from("blocked_users").select("blocked_id").eq("blocker_id",user.id);
  if(error)throw error;blockedUserIds=new Set((data||[]).map(x=>x.blocked_id));
