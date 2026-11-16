@@ -289,7 +289,7 @@ async function encryptMessage(plain,targetConversation=currentConversation){
  const recipientIds=currentRecipients(targetConversation.members||[]).sort();
  if(recipientIds.length>32)throw Error("This experimental group-encryption format supports at most 32 members. Larger rooms need a different group-encryption protocol.");
  const missing=[];for(const id of recipientIds){if(id!==user.id){try{await getPeerKeys(id);}catch(e){const name=profilesById.get(id)?.username||"a member";missing.push(name+": "+(e?.message||String(e)));}}}
- if(missing.length)throw Error("Message not sent. Encryption key checks failed:\\n"+missing.join("\\n"));
+ if(missing.length)throw Error("Message not sent. Encryption key checks failed:\n"+missing.join("\n"));
  const rawContentKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
  const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
  const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:enc.encode("twofold-message-v3|"+targetConversation.id)},contentKey,enc.encode(plain));
@@ -305,7 +305,7 @@ async function encryptImageFile(file,targetConversation=currentConversation){
  const recipientIds=currentRecipients(targetConversation.members||[]).sort();
  if(recipientIds.length>32)throw Error("This experimental group-encryption format supports at most 32 members.");
  const missing=[];for(const id of recipientIds){if(id!==user.id){try{await getPeerKeys(id);}catch(e){missing.push((profilesById.get(id)?.username||"a member")+": "+(e?.message||String(e)));}}}
- if(missing.length)throw Error("Image not sent. Encryption key checks failed:\\n"+missing.join("\\n"));
+ if(missing.length)throw Error("Image not sent. Encryption key checks failed:\n"+missing.join("\n"));
  const rawContentKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
  const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
  const plain=new Uint8Array(await file.arrayBuffer());
