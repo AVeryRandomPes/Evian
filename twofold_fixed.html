@@ -668,7 +668,7 @@ async function connectMessageRealtime(){
  if(messageChannel)await client.removeChannel(messageChannel);
  messageChannel=client.channel("twofold-all-messages-"+user.id);
  messageChannel.on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},payload=>{
-  const m=payload.new;if(!m?.conversation_id||m.sender_id===user.id)return;
+  const m=payload.new;if(!m?.conversation_id||m.sender_id===user.id||blockedUserIds.has(m.sender_id))return;
   if(currentConversation?.id===m.conversation_id){addMessage(m,m.conversation_id,selectionVersion).catch(e=>console.error("Twofold message render failed",e));return;}
   if(!conversations.some(c=>c.id===m.conversation_id))return;
   unreadCounts[m.conversation_id]=(unreadCounts[m.conversation_id]||0)+1;
