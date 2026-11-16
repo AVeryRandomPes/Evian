@@ -225,8 +225,9 @@ const enc=new TextEncoder(), dec=new TextDecoder();
 async function ensureIdentity(){
  if(!crypto?.subtle||!indexedDB)throw Error("This browser does not support the secure key storage required by Twofold. Use an up-to-date Chrome or Chromium browser.");
  let saved=await keyDBGet(user.id);
- if(!saved && (profile?.x25519_public || profile?.ed25519_public)){
-  throw Error("This account already has encryption keys on the server, but this browser has no matching private-key backup. Twofold will not replace those keys because doing so would make old messages unreadable. Use the original browser profile.");
+ const recovering=!saved&&!!(profile?.x25519_public||profile?.ed25519_public);
+ if(recovering&&!confirm("RECOVER ENCRYPTION IDENTITY?\n\nThis browser has no private-key backup, but the server still has your old public keys. Twofold must create a NEW encryption identity and replace those public keys. Messages encrypted for your old keys may become permanently unreadable. Other members will see a fingerprint change and must independently verify it. Continue?")){
+  throw Error("Encryption recovery cancelled. Your existing server keys were left unchanged.");
  }
  if(!saved){
   const x=await crypto.subtle.generateKey({name:"X25519"},false,["deriveBits"]);
@@ -234,7 +235,7 @@ async function ensureIdentity(){
   saved={xPrivate:x.privateKey,xPublic:b64u(await crypto.subtle.exportKey("raw",x.publicKey)),edPrivate:ed.privateKey,edPublic:b64u(await crypto.subtle.exportKey("raw",ed.publicKey))};
   await keyDBPut(user.id,saved);
  }
- if(profile?.x25519_public&&profile.x25519_public!==saved.xPublic || profile?.ed25519_public&&profile.ed25519_public!==saved.edPublic){
+ if(!recovering&&(profile?.x25519_public&&profile.x25519_public!==saved.xPublic || profile?.ed25519_public&&profile.ed25519_public!==saved.edPublic)){
   throw Error("The public encryption keys on the server do not match this browser's saved identity. Twofold stopped to prevent a silent key change. Verify the account identity before continuing.");
  }
  identity=saved;
