@@ -225,18 +225,20 @@ const enc=new TextEncoder(), dec=new TextDecoder();
 async function ensureIdentity(){
  if(!crypto?.subtle||!indexedDB)throw Error("This browser does not support the secure key storage required by Twofold. Use an up-to-date Chrome or Chromium browser.");
  let saved=await keyDBGet(user.id);
- const recovering=!saved&&!!(profile?.x25519_public||profile?.ed25519_public);
- if(recovering&&!confirm("RECOVER ENCRYPTION IDENTITY?\n\nThis browser has no private-key backup, but the server still has your old public keys. Twofold must create a NEW encryption identity and replace those public keys. Messages encrypted for your old keys may become permanently unreadable. Other members will see a fingerprint change and must independently verify it. Continue?")){
-  throw Error("Encryption recovery cancelled. Your existing server keys were left unchanged.");
+ const hasServerKeys=!!(profile?.x25519_public||profile?.ed25519_public);
+ const mismatch=!!saved&&(
+  (!!profile?.x25519_public&&profile.x25519_public!==saved.xPublic)||
+  (!!profile?.ed25519_public&&profile.ed25519_public!==saved.edPublic)
+ );
+ const recovering=hasServerKeys&&(!saved||mismatch);
+ if(recovering&&!confirm("RECOVER ENCRYPTION IDENTITY?\n\n"+(mismatch?"This browser has a saved private-key identity, but it does NOT match the public keys currently stored on the server.":"This browser has no private-key backup, but the server still has your old public keys.")+" Twofold must create a NEW encryption identity and replace the server public keys. Messages encrypted for the old keys may become permanently unreadable. Other members will see a fingerprint change and must independently verify it before messaging this account. Continue?")){
+  throw Error("Encryption recovery cancelled. Your existing local and server keys were left unchanged.");
  }
- if(!saved){
+ if(recovering||!saved){
   const x=await crypto.subtle.generateKey({name:"X25519"},false,["deriveBits"]);
   const ed=await crypto.subtle.generateKey({name:"Ed25519"},false,["sign","verify"]);
   saved={xPrivate:x.privateKey,xPublic:b64u(await crypto.subtle.exportKey("raw",x.publicKey)),edPrivate:ed.privateKey,edPublic:b64u(await crypto.subtle.exportKey("raw",ed.publicKey))};
   await keyDBPut(user.id,saved);
- }
- if(!recovering&&(profile?.x25519_public&&profile.x25519_public!==saved.xPublic || profile?.ed25519_public&&profile.ed25519_public!==saved.edPublic)){
-  throw Error("The public encryption keys on the server do not match this browser's saved identity. Twofold stopped to prevent a silent key change. Verify the account identity before continuing.");
  }
  identity=saved;
  const {error}=await client.from("profiles").upsert({id:user.id,username:profile.username,x25519_public:saved.xPublic,ed25519_public:saved.edPublic},{onConflict:"id"});
