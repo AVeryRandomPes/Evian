@@ -513,7 +513,7 @@ async function openConversationMenu(c,x,y,memberId=null){
    if(!memberId)addMenuButton(menu,"Close DM",()=>closeConversation(c));
    const contact=await isContact(targetId);
    if(!memberId)separator();
-   addMenuButton(menu,blockedUserIds.has(targetId)?"Unblock User":"Block User",async()=>{if(blockedUserIds.has(targetId)){const {error}=await client.rpc("twofold_unblock_user",{blocked_user:targetId});if(error)throw error;blockedUserIds.delete(targetId);}else{const {error}=await client.rpc("twofold_block_user",{blocked_user:targetId});if(error)throw error;blockedUserIds.add(targetId);}await refreshBlockedUsers();await loadConversations();},blockedUserIds.has(targetId)?"":"danger");
+   addMenuButton(menu,blockedUserIds.has(targetId)?"Unblock User":"Block User",async()=>{if(blockedUserIds.has(targetId)){const {error}=await client.rpc("twofold_unblock_user",{blocked_user:targetId});if(error)throw error;blockedUserIds.delete(targetId);}else{const {error}=await client.rpc("twofold_block_user",{blocked_user:targetId});if(error)throw error;blockedUserIds.add(targetId);}await refreshBlockedUsers();const activeId=currentConversation?.id;await loadConversations();const active=conversations.find(x=>x.id===activeId);if(active)await selectConversation(active);},blockedUserIds.has(targetId)?"":"danger");
    addMenuButton(menu,contact?"Remove User":"Add User",async()=>{
     if(contact){const {error}=await client.rpc("twofold_remove_friend",{friend_user:targetId});if(error)throw error;}
     else{if(!p?.username)throw Error("This member's username is unavailable.");const {error}=await client.rpc("twofold_send_friend_request",{target_username:p.username});if(error)throw error;}
@@ -541,7 +541,7 @@ async function refreshBlockedUsers(){
  const ids=[...blockedUserIds];
  const {data:rows,error:profileError}=await client.from("profiles").select("id,username").in("id",ids);
  if(profileError)throw profileError;
- for(const id of ids){const row=document.createElement("div");row.className="blocked-user-row";const name=document.createElement("strong");name.textContent=rows?.find(p=>p.id===id)?.username||"Unknown user";const button=document.createElement("button");button.type="button";button.className="secondary";button.textContent="Unblock";button.onclick=async()=>{button.disabled=true;const {error}=await client.rpc("twofold_unblock_user",{blocked_user:id});if(error){button.disabled=false;alert(error.message);return;}await refreshBlockedUsers();await loadConversations();};row.append(name,button);list.append(row);}
+ for(const id of ids){const row=document.createElement("div");row.className="blocked-user-row";const name=document.createElement("strong");name.textContent=rows?.find(p=>p.id===id)?.username||"Unknown user";const button=document.createElement("button");button.type="button";button.className="secondary";button.textContent="Unblock";button.onclick=async()=>{button.disabled=true;const {error}=await client.rpc("twofold_unblock_user",{blocked_user:id});if(error){button.disabled=false;alert(error.message);return;}await refreshBlockedUsers();const activeId=currentConversation?.id;await loadConversations();const active=conversations.find(x=>x.id===activeId);if(active)await selectConversation(active);};row.append(name,button);list.append(row);}
 }
 document.addEventListener("click",e=>{if(!$("conversationContextMenu").contains(e.target))closeConversationMenu();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeConversationMenu();});
