@@ -204,7 +204,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 (() => {
 "use strict";
 const $ = id => document.getElementById(id);
-let client=null, user=null, profile=null, channel=null, messageChannel=null, authSubscription=null, membershipChannel=null, conversationRefreshTimer=null, members=[], approvedMembers=[], conversations=[], conversationMembers=[], currentConversation=null, typingTimer=null, typingOffTimer=null, typingLastSentAt=0, lastMessageId=0, seenIds=new Set(), identity=null, publicKeys=new Map(), publicKeyFetchedAt=new Map(), profilesById=new Map(), selectionVersion=0, unreadCounts={}, renderedObjectUrls=new Set(), mode="login", isAdmin=false;
+let client=null, user=null, profile=null, channel=null, presenceChannel=null, messageChannel=null, authSubscription=null, membershipChannel=null, conversationRefreshTimer=null, members=[], approvedMembers=[], conversations=[], conversationMembers=[], currentConversation=null, typingTimer=null, typingOffTimer=null, typingLastSentAt=0, lastMessageId=0, seenIds=new Set(), identity=null, publicKeys=new Map(), publicKeyFetchedAt=new Map(), profilesById=new Map(), selectionVersion=0, unreadCounts={}, renderedObjectUrls=new Set(), mode="login", isAdmin=false;
 const show = (id,on=true)=>$(id).classList.toggle("hidden",!on);
 const err = (id,msg)=>$(id).textContent=msg||"";
 const initials = s => (s||"?").trim().slice(0,1).toUpperCase();
@@ -412,8 +412,8 @@ function renderConfig(){
  const result=client.auth.onAuthStateChange((event)=>{
   if(event==="SIGNED_OUT"){
    user=null;profile=null;identity=null;currentConversation=null;selectionVersion++;
-   if(channel)client.removeChannel(channel);if(messageChannel)client.removeChannel(messageChannel);if(membershipChannel)client.removeChannel(membershipChannel);
-   channel=null;messageChannel=null;membershipChannel=null;show("chat",false);show("settingsModal",false);show("auth");setMode("login");
+   if(channel)client.removeChannel(channel);if(presenceChannel)client.removeChannel(presenceChannel);if(messageChannel)client.removeChannel(messageChannel);if(membershipChannel)client.removeChannel(membershipChannel);
+   channel=null;presenceChannel=null;messageChannel=null;membershipChannel=null;show("chat",false);show("settingsModal",false);show("auth");setMode("login");
   }
  });
  authSubscription=result?.data?.subscription||null;
@@ -464,6 +464,7 @@ async function enterChat(){
  if(isAdmin)await refreshAdminTargets();
  await connectConversationRealtime();
  await connectMessageRealtime();
+ await connectPresenceRealtime();
 }
 async function loadConversations(){
  const previouslySelectedId=currentConversation?.id||null;
@@ -791,11 +792,8 @@ async function connectRealtime(conversationId=currentConversation?.id,token=sele
  if(!conversationId||token!==selectionVersion||currentConversation?.id!==conversationId)return;
  // Private channel: requires the realtime.messages RLS policies from the SQL patch.
  const activeChannel=client.channel("twofold-presence-"+conversationId,{config:{private:true,presence:{key:user.id}}});channel=activeChannel;
- activeChannel.on("presence",{event:"sync"},()=>{if(channel===activeChannel)updatePresence();});
- activeChannel.on("presence",{event:"join"},()=>{if(channel===activeChannel)updatePresence();});
- activeChannel.on("presence",{event:"leave"},()=>{if(channel===activeChannel)updatePresence();});
  activeChannel.on("broadcast",{event:"typing"},({payload})=>{if(channel===activeChannel&&payload.user_id!==user.id){$("typing").textContent=payload.typing?(profilesById.get(payload.user_id)?.username||"A member")+" is typing…":"";if(typingOffTimer)clearTimeout(typingOffTimer);if(payload.typing)typingOffTimer=setTimeout(()=>{if(channel===activeChannel)$("typing").textContent="";},2500);}});
- activeChannel.subscribe(async status=>{if(channel!==activeChannel)return;if(status==="SUBSCRIBED"){await activeChannel.track({online:true,username:profile.username,at:new Date().toISOString()});$("topStatus").textContent="Connected";}else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")$("topStatus").textContent="Connection issue";});
+ activeChannel.subscribe(status=>{if(channel!==activeChannel)return;if(status==="SUBSCRIBED")$("topStatus").textContent="Connected";else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")$("topStatus").textContent="Connection issue";});
 }
 async function connectMessageRealtime(){
  if(messageChannel)await client.removeChannel(messageChannel);
@@ -814,9 +812,27 @@ async function connectMessageRealtime(){
  });
  messageChannel.subscribe(status=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")console.warn("Twofold all-message realtime connection issue",status);});
 }
+async function connectPresenceRealtime(){
+ if(presenceChannel){await client.removeChannel(presenceChannel);presenceChannel=null;}
+ const activePresence=client.channel("twofold-presence-global",{config:{private:true,presence:{key:user.id}}});presenceChannel=activePresence;
+ activePresence.on("presence",{event:"sync"},()=>{if(presenceChannel===activePresence)updatePresence();});
+ activePresence.on("presence",{event:"join"},()=>{if(presenceChannel===activePresence)updatePresence();});
+ activePresence.on("presence",{event:"leave"},()=>{if(presenceChannel===activePresence)updatePresence();});
+ activePresence.subscribe(async status=>{
+  if(presenceChannel!==activePresence)return;
+  if(status==="SUBSCRIBED"){
+   const {error}=await activePresence.track({user_id:user.id,online:true,username:profile.username,at:new Date().toISOString()});
+   if(error){console.error("Twofold presence tracking failed:",error);$("friendStatus").innerHTML='<span class="dot"></span>Presence unavailable';}
+   else updatePresence();
+  }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
+   console.warn("Twofold global presence connection issue:",status);
+   $("friendStatus").innerHTML='<span class="dot"></span>Presence unavailable';
+  }
+ });
+}
 function updatePresence(){
- if(!channel)return;
- const state=channel.presenceState(),online=Object.keys(state).some(k=>k!==user.id&&state[k]?.length);
+ if(!presenceChannel)return;
+ const state=presenceChannel.presenceState(),online=Object.keys(state).some(k=>k!==user.id&&state[k]?.length);
  $("friendStatus").innerHTML=online?'<span class="dot online"></span>Members online':'<span class="dot"></span>No other members online';
  $("topStatus").textContent=online?"Conversation members online":"Connected";
 }
@@ -886,8 +902,8 @@ $("saveUsername").onclick=async()=>{const username=$("editUsername").value.trim(
 $("notifyToggle").onchange=()=>{if($("notifyToggle").checked){$("notifyToggle").checked=false;err("settingsMessage","Use Enable notifications below to grant browser permission.");}else{localStorage.setItem("twofold_notifications","off");err("settingsMessage","Notifications are off.");}};
 $("enableNotifications").onclick=async()=>{if(!("Notification"in window)){err("settingsMessage","This browser does not support notifications.");return;}const permission=await Notification.requestPermission();if(permission==="granted"){localStorage.setItem("twofold_notifications","on");$("notifyToggle").checked=true;err("settingsMessage","Notifications enabled. You can turn them off here.");}else{localStorage.setItem("twofold_notifications","off");$("notifyToggle").checked=false;err("settingsMessage","Permission was not granted. Notifications remain off.");}};
 async function signOut(){
- if(channel)await client.removeChannel(channel);if(messageChannel)await client.removeChannel(messageChannel);if(membershipChannel)await client.removeChannel(membershipChannel);
- channel=null;messageChannel=null;membershipChannel=null;if(conversationRefreshTimer)clearTimeout(conversationRefreshTimer);if(typingTimer)clearTimeout(typingTimer);
+ if(channel)await client.removeChannel(channel);if(presenceChannel)await client.removeChannel(presenceChannel);if(messageChannel)await client.removeChannel(messageChannel);if(membershipChannel)await client.removeChannel(membershipChannel);
+ channel=null;presenceChannel=null;messageChannel=null;membershipChannel=null;if(conversationRefreshTimer)clearTimeout(conversationRefreshTimer);if(typingTimer)clearTimeout(typingTimer);
  await client.auth.signOut();
 }
 $("signOutBtn").onclick=signOut;$("settingsSignOut").onclick=signOut;
