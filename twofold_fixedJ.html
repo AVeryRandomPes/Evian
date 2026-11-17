@@ -269,7 +269,7 @@ function requestPeerKeyApproval(name,fp,peerId){
  return new Promise(resolve=>{
   const input=$("keyVerifyInput"),status=$("keyVerifyStatus");
   let finished=false;
-  const finish=value=>{if(finished)return;finished=true;show("keyVerifyModal",false);input.value="";status.textContent="";resolve(value);};
+  const finish=value=>{if(finished)return;finished=true;show("keyVerifyModal",false);input.value="";$("keyVerifyFingerprint").value="";status.textContent="";resolve(value);};
   $("keyVerifyIntro").textContent="The saved encryption key for "+name+" has changed. Verify this new fingerprint with "+name+" through a separate trusted channel before approving it.";
   $("keyVerifyFingerprint").value=fp;input.value="";status.textContent="";
   $("keyVerifyCopy").onclick=async()=>{try{await navigator.clipboard.writeText(fp);status.textContent="Fingerprint copied.";}catch(e){$("keyVerifyFingerprint").focus();$("keyVerifyFingerprint").select();status.textContent="Copy was blocked. The fingerprint is selected so you can copy it manually."; }};
