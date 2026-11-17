@@ -193,7 +193,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <div class="row"><h2 style="margin:0">Send files</h2><button type="button" class="secondary" id="cancelImage" style="flex:0 0 auto">Cancel</button></div>
     <img id="imagePreview" class="image-preview hidden" alt="Image preview" style="max-width:100%;max-height:55vh;margin:auto">
     <div id="imagePreviewName" class="small muted"></div>
-    <p class="small muted">Files are encrypted on this device before upload. Up to 25 MB per file. Folder selections are sent as individual files with folder paths preserved.</p><button type="button" class="secondary" id="chooseFolder">Choose folder…</button>
+    <p class="small muted">Files are encrypted on this device before upload. Up to 100 MB per file. Folder selections are sent as individual files with folder paths preserved.</p><button type="button" class="secondary" id="chooseFolder">Choose folder…</button>
     <button type="button" id="confirmImage">Encrypt and send files</button>
     <div id="imageSendStatus" class="small muted"></div>
   </div>
@@ -394,7 +394,7 @@ async function encryptImageFile(file,targetConversation=currentConversation){
 }
 async function encryptAnyFile(file,targetConversation=currentConversation,relativeName=file.name){
  if(!targetConversation?.id)throw Error("Choose a conversation before sending a file.");
- if(!file||file.size>25*1024*1024)throw Error("Each file must be 25 MB or smaller.");
+ if(!file||file.size>100*1024*1024)throw Error("Each file must be 25 MB or smaller.");
  const recipientIds=await resolveEncryptionRecipients(targetConversation,"File");
  const rawContentKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
  const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
@@ -848,7 +848,7 @@ async function connectRealtime(conversationId=currentConversation?.id,token=sele
  // Private channel: requires the realtime.messages RLS policies from the SQL patch.
  const activeChannel=client.channel("twofold-presence-"+conversationId,{config:{private:true,presence:{key:user.id}}});channel=activeChannel;
  activeChannel.on("broadcast",{event:"typing"},({payload})=>{if(channel===activeChannel&&payload.user_id!==user.id){$("typing").textContent=payload.typing?(profilesById.get(payload.user_id)?.username||"A member")+" is typing…":"";if(typingOffTimer)clearTimeout(typingOffTimer);if(payload.typing)typingOffTimer=setTimeout(()=>{if(channel===activeChannel)$("typing").textContent="";},2500);}});
- activeChannel.subscribe(status=>{if(channel!==activeChannel)return;if(status==="SUBSCRIBED")$("topStatus").textContent="Connected";else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")$("topStatus").textContent="Connection issue";});
+ activeChannel.subscribe(status=>{if(channel!==activeChannel)return;if(status==="SUBSCRIBED"){if(presenceChannel)updatePresence();else $("topStatus").textContent="Connected";}else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")$("topStatus").textContent="Connection issue";});
 }
 async function connectMessageRealtime(){
  if(messageChannel)await client.removeChannel(messageChannel);
@@ -886,10 +886,17 @@ async function connectPresenceRealtime(){
  });
 }
 function updatePresence(){
- if(!presenceChannel)return;
- const state=presenceChannel.presenceState(),online=Object.keys(state).some(k=>k!==user.id&&state[k]?.length);
- $("friendStatus").innerHTML=online?'<span class="dot online"></span>Members online':'<span class="dot"></span>No other members online';
- $("topStatus").textContent=online?"Conversation members online":"Connected";
+ if(!presenceChannel){$("friendStatus").innerHTML='<span class="dot"></span>Presence unavailable';return;}
+ const state=presenceChannel.presenceState(),onlineIds=new Set();
+ for(const [key,metas] of Object.entries(state)){
+  for(const meta of (metas||[])){
+   const id=meta?.user_id||meta?.userId||key;
+   if(id&&id!==user.id&&meta?.online!==false)onlineIds.add(id);
+  }
+ }
+ const count=onlineIds.size,label=count+" other member"+(count===1?"":"s")+" online";
+ $("friendStatus").innerHTML=count?'<span class="dot online"></span>'+label:'<span class="dot"></span>No other members online';
+ $("topStatus").textContent="Connected · "+count+" online";
 }
 
 const emojiCategories={
