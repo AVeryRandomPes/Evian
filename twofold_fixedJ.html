@@ -374,6 +374,24 @@ async function encryptMessage(plain,targetConversation=currentConversation){
  envelope.sig=b64u(await crypto.subtle.sign("Ed25519",identity.edPrivate,enc.encode(canon(envelope))));
  return "twf1:"+b64u(enc.encode(JSON.stringify(envelope)));
 }
+async function encryptImageFile(file,targetConversation=currentConversation){
+ if(!targetConversation?.id)throw Error("Choose a conversation before sending an image.");
+ if(!file||!["image/jpeg","image/png","image/webp","image/gif","image/avif"].includes(file.type))throw Error("Choose a JPEG, PNG, WebP, GIF, or AVIF image.");
+ if(file.size>5*1024*1024)throw Error("Images must be 5 MB or smaller.");
+ const recipientIds=await resolveEncryptionRecipients(targetConversation,"Image");
+ const rawContentKey=crypto.getRandomValues(new Uint8Array(32)),iv=crypto.getRandomValues(new Uint8Array(12));
+ const contentKey=await crypto.subtle.importKey("raw",rawContentKey,{name:"AES-GCM"},false,["encrypt","decrypt"]);
+ const plain=new Uint8Array(await file.arrayBuffer());
+ const cipher=await crypto.subtle.encrypt({name:"AES-GCM",iv,additionalData:enc.encode("twofold-image-v3|"+targetConversation.id)},contentKey,plain);
+ const hash=b64u(await crypto.subtle.digest("SHA-256",cipher));
+ const path=crypto.randomUUID()+".enc";
+ const {error:uploadError}=await client.storage.from("twofold-media").upload(path,new Blob([cipher],{type:"application/octet-stream"}),{contentType:"application/octet-stream",upsert:false});
+ if(uploadError)throw Error("Encrypted image upload failed: "+uploadError.message);
+ const recipients={};for(const id of recipientIds)recipients[id]=await wrapContentKey(id,rawContentKey);
+ const envelope={v:3,type:"image",from:user.id,conversation_id:targetConversation.id,recipient_ids:recipientIds,path,mime:file.type,name:"Image",size:file.size,hash,iv:b64u(iv),recipients};
+ envelope.sig=b64u(await crypto.subtle.sign("Ed25519",identity.edPrivate,enc.encode(canon(envelope))));
+ return "twf1img:"+b64u(enc.encode(JSON.stringify(envelope)));
+}
 async function encryptAnyFile(file,targetConversation=currentConversation,relativeName=file.name){
  if(!targetConversation?.id)throw Error("Choose a conversation before sending a file.");
  if(!file||file.size>100*1024*1024)throw Error("Each file must be 100 MB or smaller.");
