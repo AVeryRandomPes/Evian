@@ -199,6 +199,19 @@ button:disabled{opacity:.5;cursor:not-allowed}
   </div>
 </div>
 
+<div id="keyVerifyModal" class="modal hidden" style="z-index:80">
+  <div class="card stack" style="width:min(540px,100%)">
+    <div class="row"><h2 style="margin:0">Verify encryption key</h2><button type="button" class="secondary" id="keyVerifyClose" style="flex:0 0 auto">Cancel</button></div>
+    <p id="keyVerifyIntro" class="small muted"></p>
+    <div class="field"><label for="keyVerifyFingerprint">New combined fingerprint</label><textarea id="keyVerifyFingerprint" rows="2" readonly style="font-family:monospace;letter-spacing:.04em"></textarea></div>
+    <button type="button" class="secondary" id="keyVerifyCopy">Copy fingerprint</button>
+    <p class="small muted">Compare it with the account owner through a separate trusted channel. Approve only if every character matches.</p>
+    <div class="field"><label for="keyVerifyInput">Paste the independently verified fingerprint</label><input id="keyVerifyInput" autocomplete="off" spellcheck="false" placeholder="Paste fingerprint here"></div>
+    <div id="keyVerifyStatus" class="small muted"></div>
+    <div class="row"><button type="button" class="secondary" id="keyVerifyCancel">Cancel</button><button type="button" id="keyVerifyApprove">Approve key change</button></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script>
 (() => {
@@ -250,7 +263,22 @@ async function peerKeyFingerprint(keys){
  const h=await crypto.subtle.digest("SHA-256",bytes);
  return Array.from(new Uint8Array(h).slice(0,16)).map(x=>x.toString(16).padStart(2,"0")).join("").match(/.{1,4}/g).join(" ").toUpperCase();
 }
-// Peer key pins live in IndexedDB next to the private keys. Old localStorage pins are migrated on first use.
+// Built-in temporary verification UI. A declined key remains blocked for this session without repeated popups.
+const declinedPeerKeyChanges=new Set();
+function requestPeerKeyApproval(name,fp,peerId){
+ return new Promise(resolve=>{
+  const input=$("keyVerifyInput"),status=$("keyVerifyStatus");
+  let finished=false;
+  const finish=value=>{if(finished)return;finished=true;show("keyVerifyModal",false);input.value="";status.textContent="";resolve(value);};
+  $("keyVerifyIntro").textContent="The saved encryption key for "+name+" has changed. Verify this new fingerprint with "+name+" through a separate trusted channel before approving it.";
+  $("keyVerifyFingerprint").value=fp;input.value="";status.textContent="";
+  $("keyVerifyCopy").onclick=async()=>{try{await navigator.clipboard.writeText(fp);status.textContent="Fingerprint copied.";}catch(e){$("keyVerifyFingerprint").focus();$("keyVerifyFingerprint").select();status.textContent="Copy was blocked. The fingerprint is selected so you can copy it manually."; }};
+  const cancel=()=>{declinedPeerKeyChanges.add(peerId);finish(null);};
+  $("keyVerifyCancel").onclick=cancel;$("keyVerifyClose").onclick=cancel;
+  $("keyVerifyApprove").onclick=()=>{if(input.value.trim().toUpperCase().replace(/\\s+/g," ")!==fp){status.textContent="Fingerprint does not match. Nothing was approved.";return;}finish(fp);};
+  show("keyVerifyModal");input.focus();
+ });
+}
 async function checkPeerKeyPin(peerId,keys){
  const id="pin:"+user.id+":"+peerId,legacy="twofold_peer_key_pin_"+user.id+"_"+peerId;
  const current=JSON.stringify({x:keys.x25519_public,ed:keys.ed25519_public});
@@ -258,17 +286,15 @@ async function checkPeerKeyPin(peerId,keys){
  if(!pinned){pinned=localStorage.getItem(legacy);if(pinned)await keyDBPut(id,pinned);}
  if(pinned&&pinned!==current){
   const name=profilesById.get(peerId)?.username||"this member";
+  if(declinedPeerKeyChanges.has(peerId))throw Error("SECURITY WARNING: "+name+"’s changed encryption key has not been approved on this device. Messages from this account remain blocked.");
   const fp=await peerKeyFingerprint(keys);
-  const entered=prompt("ENCRYPTION KEY CHANGED FOR "+name.toUpperCase()+"\n\nNew combined public-key fingerprint:\n"+fp+"\n\nCompare this exact fingerprint with "+name+" through a separate trusted channel (in person or a phone call). If it matches, type or paste the fingerprint below to approve this intentional key replacement. Otherwise press Cancel.\n\nApproving replaces only the saved fingerprint on this device.");
-  if((entered||"").trim().toUpperCase()!==fp){
-   throw Error("SECURITY WARNING: this member’s public encryption key changed and has NOT been approved. Messages from this account remain blocked.");
-  }
+  const entered=await requestPeerKeyApproval(name,fp,peerId);
+  if(entered!==fp)throw Error("SECURITY WARNING: "+name+"’s public encryption key changed and has NOT been approved. Messages from this account remain blocked.");
   await keyDBPut(id,current);
   localStorage.removeItem(legacy);
-  publicKeys.delete(peerId);
-  publicKeyFetchedAt.delete(peerId);
+  publicKeys.delete(peerId);publicKeyFetchedAt.delete(peerId);
  }
- if(!pinned)await keyDBPut(id,current); // Trust on first use; verify the displayed fingerprint out of band.
+ if(!pinned)await keyDBPut(id,current);
  return keys;
 }
 async function getPeerKeys(senderId){
